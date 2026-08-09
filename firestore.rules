@@ -12,6 +12,11 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin'
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status != false;
     }
+    function isAdmin() {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status != false;
+    }
     function isRecentServerTime(value) {
       return value is timestamp && value == request.time;
     }
@@ -24,6 +29,14 @@ service cloud.firestore {
         && data.role == 'admin' && data.kd_role == 11 && data.status is bool
         && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt)
         && data.lastLogin == null;
+    }
+    function isValidWBProfile(data) {
+      return data.keys().hasAll(['nama', 'email', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['nama', 'email', 'paket', 'nik', 'noHp', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
+        && data.nama is string && data.nama.size() > 1 && data.nama.size() <= 100
+        && data.email is string && data.email.size() > 4 && data.email.size() <= 254
+        && data.role == 'wb' && data.kd_role == 22 && data.status is bool
+        && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt);
     }
     function isValidAdminDirectory(uid, data) {
       return data.keys().hasOnly(['uid', 'email', 'nama', 'username', 'role', 'status', 'createdAt', 'updatedAt', 'lastLogin'])
@@ -56,15 +69,40 @@ service cloud.firestore {
         && isRecentServerTime(data.timestamp) && data.metadata is map && data.metadata.keys().hasOnly(['source'])
         && data.metadata.source is string && data.metadata.source.size() <= 40;
     }
+    function isValidNewsDoc(data) {
+      return data.keys().hasOnly(['title', 'deskripsi', 'tipeMedia', 'mediaType', 'mediaUrl', 'mediaBase64', 'author', 'createdAt', 'updatedAt'])
+        && data.keys().hasAll(['title', 'deskripsi', 'tipeMedia', 'author', 'createdAt', 'updatedAt'])
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 200
+        && data.deskripsi is string && data.deskripsi.size() > 0 && data.deskripsi.size() <= 3000
+        && data.author is string && data.author.size() <= 100
+        && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt)
+        && data.tipeMedia in ['gambar', 'video']
+        && (
+          (data.tipeMedia == 'video'
+            && data.mediaUrl is string && data.mediaUrl.size() > 0 && data.mediaUrl.size() <= 500
+            && !('mediaBase64' in data.keys()) && !('mediaType' in data.keys()))
+          || (data.tipeMedia == 'gambar' && data.mediaType in ['upload', 'url']
+            && (
+              (data.mediaType == 'url'
+                && data.mediaUrl is string && data.mediaUrl.size() > 0 && data.mediaUrl.size() <= 500
+                && !('mediaBase64' in data.keys()))
+              || (data.mediaType == 'upload'
+                && data.mediaBase64 is string && data.mediaBase64.size() > 0 && data.mediaBase64.size() <= 900000
+                && !('mediaUrl' in data.keys()))
+            ))
+        );
+    }
 
     match /konten/{document} { allow read: if true; allow write: if false; }
 
     match /users/{uid} {
-      allow get: if isOwner(uid) || isSuperadmin();
-      allow create: if isSuperadmin() && isValidAdminProfile(request.resource.data);
+      allow get: if isOwner(uid) || isSuperadmin() || isAdmin();
+      allow list: if isSuperadmin() || isAdmin();
+      allow create: if (isSuperadmin() && isValidAdminProfile(request.resource.data))
+        || ((isSuperadmin() || isAdmin()) && isValidWBProfile(request.resource.data));
       allow update: if (isOwner(uid) && isValidLastLoginUpdate())
         || (isSuperadmin() && isValidAdminStatusUpdate());
-      allow delete, list: if false;
+      allow delete: if false;
     }
 
     match /admins/{uid} {
@@ -78,6 +116,12 @@ service cloud.firestore {
     match /auditLogs/{logId} {
       allow get, list: if isSuperadmin();
       allow create: if isSignedIn() && isValidAuditLog(request.resource.data);
+      allow update, delete: if false;
+    }
+
+    match /news/{newsId} {
+      allow get, list: if true;
+      allow create: if (isSuperadmin() || isAdmin()) && isValidNewsDoc(request.resource.data);
       allow update, delete: if false;
     }
 

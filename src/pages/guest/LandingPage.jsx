@@ -7,7 +7,7 @@ import Footer from '../../components/guest/Footer';
 
 const LandingPage = () => {
     return (
-        <div className="font-sans text-gray-800 bg-gray-50 min-h-screen flex flex-col">
+        <div className="font-sans text-gray-800 dark:text-slate-100 bg-gray-50 dark:bg-slate-950 min-h-screen flex flex-col transition-colors">
             <Navbar />
             <Hero />
             <InfoCards />

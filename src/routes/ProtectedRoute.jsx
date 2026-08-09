@@ -2,7 +2,7 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-const ProtectedRoute = ({ allowedRoles }) => {
+const ProtectedRoute = ({ children, allowedRoles }) => {
     const { currentUser, loading } = useAuth();
 
     if (loading) return <div>Loading...</div>; // Loading state
@@ -16,7 +16,7 @@ const ProtectedRoute = ({ allowedRoles }) => {
         return <div>Akun Anda dinonaktifkan. Hubungi Admin.</div>;
     }
 
-    return <Outlet />;
+    return children ? children : <Outlet />;
 };
 
 export default ProtectedRoute;

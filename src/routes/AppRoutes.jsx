@@ -1,83 +1,82 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
-// Import Layouts
-import { GuestLayout } from '../layouts/GuestLayout';
-import { WBLayout } from '../layouts/WBLayout';
-import { PengajarLayout } from '../layouts/PengajarLayout';
-import { AdminLayout } from '../layouts/AdminLayout';
+// Layouts
+import {GuestLayout} from '../layouts/GuestLayout';
+import AdminLayout from '../layouts/AdminLayout';
 
-// Komponen pelindung rute
-const ProtectedRoute = ({ children, allowedRoles }) => {
-    const { user, role, loading } = useAuth();
+// Guard
+import ProtectedRoute from './ProtectedRoute';
 
-    if (loading) return <div className="flex h-screen items-center justify-center">Loading...</div>;
+// Pages - Guest & Auth
+import LandingPage from '../pages/guest/LandingPage';
+import ProfilePage from '../pages/guest/ProfilePage';
+import NewsPage from '../pages/guest/NewsPage';
+import NewsDetail from '../pages/guest/NewsDetail';
+import RegistrationPage from '../pages/guest/RegistrationPage';
+import LoginPage from '../pages/auth/LoginPage';
 
-    if (!user) return <Navigate to="/login" replace />;
+// Pages - Superadmin Khusus
+import SuperadminDashboard from '../pages/superadmin/SuperadminDashboard';
+import AdminManagementPage from '../pages/superadmin/AdminManagementPage';
 
-    if (allowedRoles && !allowedRoles.includes(role)) {
-        return <Navigate to="/" replace />;
-    }
+// Pages - Admin & Superadmin Joint Features (Tahap 5)
+import WBManagementPage from '../pages/admin/WBManagementPage';
+import BeritaManagementPage from '../pages/admin/BeritaManagementPage';
 
-    return children;
-};
-
-export const AppRoutes = () => {
+const AppRoutes = () => {
     return (
-        <BrowserRouter>
-            <Routes>
-                {/* === RUTE GUEST (Publik) === */}
-                <Route element={<GuestLayout />}>
-                    <Route path="/" element={<div>Halaman Utama Guest (Beranda PKBM)</div>} />
-                    <Route path="/login" element={<div>Halaman Login</div>} />
-                    <Route path="/pendaftaran" element={<div>Halaman Pendaftaran Calon WB</div>} />
-                </Route>
+        <Routes>
+            {/* 1. PUBLIC GUEST ROUTES (Membawa Navbar & Footer via GuestLayout) */}
+            <Route element={<GuestLayout />}>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/profil" element={<ProfilePage />} />
+                <Route path="/berita" element={<NewsPage />} />
+                <Route path="/berita/:id" element={<NewsDetail />} />
+                <Route path="/daftar" element={<RegistrationPage />} />
+                <Route path="/login" element={<LoginPage />} />
+            </Route>
 
-                {/* === RUTE WARGA BELAJAR === */}
-                <Route
-                    path="/wb"
-                    element={
-                        <ProtectedRoute allowedRoles={['wb']}>
-                            <WBLayout />
-                        </ProtectedRoute>
-                    }
-                >
-                    <Route path="dashboard" element={<div>Dashboard Warga Belajar</div>} />
-                    <Route path="jadwal" element={<div>Jadwal Pelajaran WB</div>} />
-                </Route>
+            {/* 2. RUTE SUPERADMIN KHUSUS */}
+            <Route
+                element={
+                    <ProtectedRoute allowedRoles={['superadmin']}>
+                        <AdminLayout />
+                    </ProtectedRoute>
+                }
+            >
+                <Route path="/superadmin/dashboard" element={<SuperadminDashboard />} />
+                <Route path="/superadmin/admins" element={<AdminManagementPage />} />
+            </Route>
 
-                {/* === RUTE PENGAJAR === */}
-                <Route
-                    path="/pengajar"
-                    element={
-                        <ProtectedRoute allowedRoles={['pengajar']}>
-                            <PengajarLayout />
-                        </ProtectedRoute>
-                    }
-                >
-                    <Route path="dashboard" element={<div>Dashboard Pengajar</div>} />
-                    <Route path="jadwal" element={<div>Jadwal Mengajar</div>} />
-                </Route>
+            {/* 3. RUTE OPERASIONAL (ADMIN & SUPERADMIN DUAL-ACCESS) */}
+            <Route
+                element={
+                    <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+                        <AdminLayout />
+                    </ProtectedRoute>
+                }
+            >
+                <Route path="/admin/dashboard" element={<WBManagementPage />} />
+                <Route path="/admin/wb" element={<WBManagementPage />} />
+                <Route path="/admin/konten" element={<BeritaManagementPage />} />
+            </Route>
 
-                {/* === RUTE ADMIN & SUPERADMIN === */}
-                <Route
-                    path="/admin"
-                    element={
-                        <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
-                            <AdminLayout />
-                        </ProtectedRoute>
-                    }
-                >
-                    <Route path="dashboard" element={<div>Dashboard Admin</div>} />
-                    <Route path="wb" element={<div>Manajemen Warga Belajar</div>} />
-                    <Route path="pengajar" element={<div>Manajemen Pengajar</div>} />
-                    <Route path="mata-pelajaran" element={<div>Manajemen Mata Pelajaran</div>} />
-                    <Route path="jadwal" element={<div>Manajemen Jadwal</div>} />
-                </Route>
-
-                {/* Rute tidak ditemukan (404) */}
-                <Route path="*" element={<div className="flex h-screen items-center justify-center text-2xl">404 - Halaman Tidak Ditemukan</div>} />
-            </Routes>
-        </BrowserRouter>
+            {/* 4. RUTE UN-AUTHORIZED & FALLBACK */}
+            <Route path="/unauthorized" element={
+                <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
+                    <div className="bg-white p-8 rounded-2xl shadow-md text-center max-w-md w-full">
+                        <h1 className="text-2xl font-bold text-red-600 mb-2">Akses Ditolak</h1>
+                        <p className="text-slate-600 text-sm mb-4">Anda tidak memiliki hak akses untuk membuka halaman ini.</p>
+                        <a href="/" className="inline-block bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                            Kembali ke Beranda
+                        </a>
+                    </div>
+                </div>
+            } />
+            <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
     );
 };
+
+export default AppRoutes;
