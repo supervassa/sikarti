@@ -1,0 +1,86 @@
+rules_version = '2';
+
+// users/{uid}: private authentication profile.  admins/{uid}: the restricted
+// directory that superadmin uses to manage admin accounts.  auditLogs/{id}:
+// append-only activity records; only superadmin may read them.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
+    function isSuperadmin() {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin'
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status != false;
+    }
+    function isRecentServerTime(value) {
+      return value is timestamp && value == request.time;
+    }
+    function isValidAdminProfile(data) {
+      return data.keys().hasOnly(['email', 'nama', 'username', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt', 'lastLogin'])
+        && data.keys().hasAll(['email', 'nama', 'username', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt', 'lastLogin'])
+        && data.email is string && data.email.size() > 4 && data.email.size() <= 254
+        && data.nama is string && data.nama.size() > 1 && data.nama.size() <= 100
+        && data.username is string && data.username.size() > 1 && data.username.size() <= 50
+        && data.role == 'admin' && data.kd_role == 11 && data.status is bool
+        && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt)
+        && data.lastLogin == null;
+    }
+    function isValidAdminDirectory(uid, data) {
+      return data.keys().hasOnly(['uid', 'email', 'nama', 'username', 'role', 'status', 'createdAt', 'updatedAt', 'lastLogin'])
+        && data.keys().hasAll(['uid', 'email', 'nama', 'username', 'role', 'status', 'createdAt', 'updatedAt', 'lastLogin'])
+        && data.uid == uid && data.email is string && data.email.size() > 4 && data.email.size() <= 254
+        && data.nama is string && data.nama.size() > 1 && data.nama.size() <= 100
+        && data.username is string && data.username.size() > 1 && data.username.size() <= 50
+        && data.role == 'admin' && data.status is bool
+        && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt)
+        && data.lastLogin == null;
+    }
+    function isValidAdminStatusUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && request.resource.data.status is bool && isRecentServerTime(request.resource.data.updatedAt)
+        && resource.data.role == 'admin' && request.resource.data.role == 'admin';
+    }
+    function isValidLastLoginUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastLogin'])
+        && isRecentServerTime(request.resource.data.lastLogin);
+    }
+    function isValidAuditLog(data) {
+      return data.keys().hasOnly(['action', 'module', 'targetId', 'targetType', 'performedBy', 'performedByName', 'performedByEmail', 'timestamp', 'metadata'])
+        && data.keys().hasAll(['action', 'module', 'targetId', 'targetType', 'performedBy', 'performedByName', 'performedByEmail', 'timestamp', 'metadata'])
+        && data.action in ['CREATE', 'UPDATE', 'DELETE', 'ACTIVATE', 'DEACTIVATE', 'LOGIN', 'LOGOUT']
+        && data.module is string && data.module.size() > 0 && data.module.size() <= 40
+        && data.targetId is string && data.targetId.size() > 0 && data.targetId.size() <= 128
+        && data.targetType is string && data.targetType.size() > 0 && data.targetType.size() <= 40
+        && data.performedBy == request.auth.uid && data.performedByName is string && data.performedByName.size() <= 100
+        && data.performedByEmail is string && data.performedByEmail.size() <= 254
+        && isRecentServerTime(data.timestamp) && data.metadata is map && data.metadata.keys().hasOnly(['source'])
+        && data.metadata.source is string && data.metadata.source.size() <= 40;
+    }
+
+    match /konten/{document} { allow read: if true; allow write: if false; }
+
+    match /users/{uid} {
+      allow get: if isOwner(uid) || isSuperadmin();
+      allow create: if isSuperadmin() && isValidAdminProfile(request.resource.data);
+      allow update: if (isOwner(uid) && isValidLastLoginUpdate())
+        || (isSuperadmin() && isValidAdminStatusUpdate());
+      allow delete, list: if false;
+    }
+
+    match /admins/{uid} {
+      allow get, list: if isSuperadmin();
+      allow create: if isSuperadmin() && isValidAdminDirectory(uid, request.resource.data);
+      allow update: if (isOwner(uid) && isValidLastLoginUpdate())
+        || (isSuperadmin() && isValidAdminStatusUpdate());
+      allow delete: if false;
+    }
+
+    match /auditLogs/{logId} {
+      allow get, list: if isSuperadmin();
+      allow create: if isSignedIn() && isValidAuditLog(request.resource.data);
+      allow update, delete: if false;
+    }
+
+    match /{document=**} { allow read, write: if false; }
+  }
+}
