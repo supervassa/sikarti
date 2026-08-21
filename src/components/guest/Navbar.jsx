@@ -13,6 +13,8 @@ const NAV_LINKS = [
 const DASHBOARD_PATH_BY_ROLE = {
     superadmin: '/superadmin/dashboard',
     admin: '/admin/dashboard',
+    pengajar: '/pengajar/dashboard',
+    wb: '/wb/dashboard',
 };
 
 const Navbar = () => {

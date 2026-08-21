@@ -1,8 +1,9 @@
 rules_version = '2';
 
-// users/{uid}: private authentication profile.  admins/{uid}: the restricted
-// directory that superadmin uses to manage admin accounts.  auditLogs/{id}:
-// append-only activity records; only superadmin may read them.
+// users/{uid}: private authentication profile (admin, wb, pengajar all live here).
+// admins/{uid}: the restricted directory that superadmin uses to manage admin accounts.
+// auditLogs/{id}: append-only activity records; only superadmin may read them.
+// subjects/schedules/presensi/invoices/registrations: operasional data admin & superadmin kelola.
 service cloud.firestore {
   match /databases/{database}/documents {
     function isSignedIn() { return request.auth != null; }
@@ -17,6 +18,18 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status != false;
     }
+    function isStaff() { return isSuperadmin() || isAdmin(); }
+    function isPengajar() {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'pengajar'
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status != false;
+    }
+    // Dipakai supaya pengajar bisa baca presensi WB khusus untuk sesi kelas yang dia mulai sendiri
+    // (roster kehadiran di Jadwal Mengajar), bukan presensi WB di kelas orang lain.
+    function isPengajarOfSession(sessionId) {
+      return isPengajar()
+        && get(/databases/$(database)/documents/classSessions/$(sessionId)).data.pengajarId == request.auth.uid;
+    }
     function isRecentServerTime(value) {
       return value is timestamp && value == request.time;
     }
@@ -30,13 +43,50 @@ service cloud.firestore {
         && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt)
         && data.lastLogin == null;
     }
+    // Status WB 3-state: AKTIF, NONAKTIF (wajib catat terakhirAktif), LULUS (wajib catat tahunLulus).
+    // Field tahun yang tidak relevan dengan status saat ini wajib TIDAK ADA (dibersihkan via deleteField()
+    // di setWBLifecycleStatus) supaya data tidak basi saat status berpindah lagi.
     function isValidWBProfile(data) {
       return data.keys().hasAll(['nama', 'email', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
-        && data.keys().hasOnly(['nama', 'email', 'paket', 'nik', 'noHp', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['nama', 'email', 'paket', 'nik', 'noHp', 'tahunAngkatan', 'tahunLulus', 'terakhirAktif', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
         && data.nama is string && data.nama.size() > 1 && data.nama.size() <= 100
         && data.email is string && data.email.size() > 4 && data.email.size() <= 254
-        && data.role == 'wb' && data.kd_role == 22 && data.status is bool
+        && data.role == 'wb' && data.kd_role == 22 && data.status in ['AKTIF', 'NONAKTIF', 'LULUS']
+        && (!('paket' in data.keys()) || data.paket in ['Paket A', 'Paket B', 'Paket C'])
+        && (!('tahunAngkatan' in data.keys()) || (data.tahunAngkatan is string && data.tahunAngkatan.size() <= 20))
+        && (!('nik' in data.keys()) || (data.nik is string && data.nik.size() <= 30))
+        && (!('noHp' in data.keys()) || (data.noHp is string && data.noHp.size() <= 30))
+        && (data.status == 'LULUS'
+            ? (data.tahunLulus is string && data.tahunLulus.size() > 0 && data.tahunLulus.size() <= 20)
+            : !('tahunLulus' in data.keys()))
+        && (data.status == 'NONAKTIF'
+            ? (data.terakhirAktif is string && data.terakhirAktif.size() > 0 && data.terakhirAktif.size() <= 20)
+            : !('terakhirAktif' in data.keys()))
         && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt);
+    }
+    function isValidPengajarProfile(data) {
+      return data.keys().hasAll(['nama', 'email', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['nama', 'email', 'mapelDiampu', 'noHp', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
+        && data.nama is string && data.nama.size() > 1 && data.nama.size() <= 100
+        && data.email is string && data.email.size() > 4 && data.email.size() <= 254
+        && data.role == 'pengajar' && data.kd_role == 33 && data.status is bool
+        && (!('mapelDiampu' in data.keys()) || (data.mapelDiampu is string && data.mapelDiampu.size() <= 100))
+        && (!('noHp' in data.keys()) || (data.noHp is string && data.noHp.size() <= 30))
+        && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt);
+    }
+    // Admin/superadmin mengedit profil WB atau Pengajar (data diri + status aktif/nonaktif).
+    // role/kd_role/createdAt dikunci agar tidak bisa diubah lewat jalur update biasa.
+    function isValidWBOrPengajarEdit() {
+      return isStaff()
+        && resource.data.role in ['wb', 'pengajar']
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.kd_role == resource.data.kd_role
+        && request.resource.data.createdAt == resource.data.createdAt
+        && isRecentServerTime(request.resource.data.updatedAt)
+        && (
+          (resource.data.role == 'wb' && isValidWBProfile(request.resource.data))
+          || (resource.data.role == 'pengajar' && isValidPengajarProfile(request.resource.data))
+        );
     }
     function isValidAdminDirectory(uid, data) {
       return data.keys().hasOnly(['uid', 'email', 'nama', 'username', 'role', 'status', 'createdAt', 'updatedAt', 'lastLogin'])
@@ -57,17 +107,22 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastLogin'])
         && isRecentServerTime(request.resource.data.lastLogin);
     }
+    // WB/Pengajar boleh ubah nomor HP sendiri (ProfilWB) — field lain tetap terkunci.
+    function isValidSelfContactUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['noHp', 'updatedAt'])
+        && request.resource.data.noHp is string && request.resource.data.noHp.size() <= 30
+        && isRecentServerTime(request.resource.data.updatedAt);
+    }
     function isValidAuditLog(data) {
       return data.keys().hasOnly(['action', 'module', 'targetId', 'targetType', 'performedBy', 'performedByName', 'performedByEmail', 'timestamp', 'metadata'])
         && data.keys().hasAll(['action', 'module', 'targetId', 'targetType', 'performedBy', 'performedByName', 'performedByEmail', 'timestamp', 'metadata'])
-        && data.action in ['CREATE', 'UPDATE', 'DELETE', 'ACTIVATE', 'DEACTIVATE', 'LOGIN', 'LOGOUT']
+        && data.action in ['CREATE', 'UPDATE', 'DELETE', 'ACTIVATE', 'DEACTIVATE', 'UPDATE_STATUS', 'LOGIN', 'LOGOUT']
         && data.module is string && data.module.size() > 0 && data.module.size() <= 40
         && data.targetId is string && data.targetId.size() > 0 && data.targetId.size() <= 128
         && data.targetType is string && data.targetType.size() > 0 && data.targetType.size() <= 40
         && data.performedBy == request.auth.uid && data.performedByName is string && data.performedByName.size() <= 100
         && data.performedByEmail is string && data.performedByEmail.size() <= 254
-        && isRecentServerTime(data.timestamp) && data.metadata is map && data.metadata.keys().hasOnly(['source'])
-        && data.metadata.source is string && data.metadata.source.size() <= 40;
+        && isRecentServerTime(data.timestamp) && data.metadata is map && data.metadata.size() <= 8;
     }
     function isValidNewsDoc(data) {
       return data.keys().hasOnly(['title', 'deskripsi', 'tipeMedia', 'mediaType', 'mediaUrl', 'mediaBase64', 'author', 'createdAt', 'updatedAt'])
@@ -92,17 +147,169 @@ service cloud.firestore {
             ))
         );
     }
+    // Bentuk dokumen mapel/jadwal dipisah dari cek createdAt/updatedAt supaya bisa dipakai ulang
+    // baik untuk create (createdAt harus baru) maupun update (createdAt dikunci, updatedAt baru).
+    function isValidMapelShape(data) {
+      return data.keys().hasAll(['nama', 'paket', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['nama', 'paket', 'createdAt', 'updatedAt'])
+        && data.nama is string && data.nama.size() > 0 && data.nama.size() <= 100
+        && data.paket in ['Paket A', 'Paket B', 'Paket C'];
+    }
+    function isValidMapelCreate(data) {
+      return isValidMapelShape(data) && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt);
+    }
+    function isValidMapelUpdate() {
+      return isValidMapelShape(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && isRecentServerTime(request.resource.data.updatedAt);
+    }
+    function isValidJadwalShape(data) {
+      return data.keys().hasAll(['namaMapel', 'hari', 'jamMulai', 'jamSelesai', 'pengajar', 'paket', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['namaMapel', 'hari', 'jamMulai', 'jamSelesai', 'pengajar', 'paket', 'createdAt', 'updatedAt'])
+        && data.namaMapel is string && data.namaMapel.size() > 0 && data.namaMapel.size() <= 100
+        && data.hari in ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+        && data.jamMulai is string && data.jamMulai.size() <= 8
+        && data.jamSelesai is string && data.jamSelesai.size() <= 8
+        && data.pengajar is string && data.pengajar.size() <= 100
+        && data.paket in ['Paket A', 'Paket B', 'Paket C'];
+    }
+    function isValidJadwalCreate(data) {
+      return isValidJadwalShape(data) && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt);
+    }
+    function isValidJadwalUpdate() {
+      return isValidJadwalShape(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && isRecentServerTime(request.resource.data.updatedAt);
+    }
+    function isValidLatLng(data) {
+      return data is map && data.keys().hasOnly(['lat', 'lng']) && data.keys().hasAll(['lat', 'lng'])
+        && data.lat is number && data.lat >= -90 && data.lat <= 90
+        && data.lng is number && data.lng >= -180 && data.lng <= 180;
+    }
+    // Dasar field yang selalu ada di setiap dokumen presensi, baik dicatat admin (manual,
+    // tanpa sesi/foto) maupun WB sendiri (wajib sesi kelas aktif + foto + lokasi).
+    function isValidPresensiBase(data) {
+      return data.wbId is string && data.wbId.size() > 0
+        && data.nama is string && data.nama.size() > 0 && data.nama.size() <= 100
+        && data.status in ['Hadir', 'Izin', 'Sakit', 'Alpa']
+        && data.tanggal is string && data.tanggal.size() == 10
+        && data.recordedBy == request.auth.uid
+        && isRecentServerTime(data.createdAt);
+    }
+    function isValidAdminPresensiDoc(data) {
+      return data.keys().hasAll(['wbId', 'nama', 'status', 'tanggal', 'recordedBy', 'createdAt'])
+        && data.keys().hasOnly(['wbId', 'nama', 'status', 'tanggal', 'recordedBy', 'createdAt'])
+        && isValidPresensiBase(data);
+    }
+    // Presensi mandiri WB: hanya boleh menandai diri sendiri Hadir, wajib terhubung ke
+    // classSessions yang masih aktif (belum lewat durasiMenit sejak startedAt), wajib foto+lokasi.
+    function isValidSelfCheckinDoc(data) {
+      return data.keys().hasAll(['wbId', 'nama', 'status', 'tanggal', 'sessionId', 'namaMapel', 'lokasi', 'fotoBase64', 'recordedBy', 'createdAt'])
+        && data.keys().hasOnly(['wbId', 'nama', 'status', 'tanggal', 'sessionId', 'namaMapel', 'lokasi', 'fotoBase64', 'recordedBy', 'createdAt'])
+        && isValidPresensiBase(data)
+        && data.status == 'Hadir'
+        && data.wbId == request.auth.uid
+        && data.sessionId is string && data.sessionId.size() > 0
+        && data.namaMapel is string && data.namaMapel.size() > 0 && data.namaMapel.size() <= 100
+        && isValidLatLng(data.lokasi)
+        && data.fotoBase64 is string && data.fotoBase64.size() > 0 && data.fotoBase64.size() <= 900000
+        && isClassSessionActive(data.sessionId);
+    }
+    // Sesi dianggap aktif kalau belum distop manual DAN belum lewat durasinya.
+    function isClassSessionActive(sessionId) {
+      let session = get(/databases/$(database)/documents/classSessions/$(sessionId)).data;
+      return !('stoppedAt' in session.keys())
+        && request.time < session.startedAt + duration.value(session.durasiMenit, 'm');
+    }
+    // Sesi kelas dibuat pengajar lewat "Mulai Mengajar" — sekaligus jadi bukti kehadiran pengajar
+    // (foto+lokasi wajib). ID dokumen deterministik {scheduleId}_{tanggal} dari client, jadi cukup
+    // dicek pengajarId == auth.uid; keunikan per hari dijaga lewat transaksi create-if-absent di client.
+    function isValidClassSessionDoc(data) {
+      return data.keys().hasAll(['scheduleId', 'namaMapel', 'paket', 'hari', 'tanggal', 'durasiMenit', 'pengajarId', 'pengajarNama', 'lokasi', 'fotoBase64', 'startedAt'])
+        && data.keys().hasOnly(['scheduleId', 'namaMapel', 'paket', 'hari', 'tanggal', 'durasiMenit', 'pengajarId', 'pengajarNama', 'lokasi', 'fotoBase64', 'startedAt'])
+        && data.scheduleId is string && data.scheduleId.size() > 0
+        && data.namaMapel is string && data.namaMapel.size() > 0 && data.namaMapel.size() <= 100
+        && data.paket in ['Paket A', 'Paket B', 'Paket C']
+        && data.hari in ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+        && data.tanggal is string && data.tanggal.size() == 10
+        && data.durasiMenit is number && data.durasiMenit > 0 && data.durasiMenit <= 600
+        && data.pengajarId == request.auth.uid
+        && data.pengajarNama is string && data.pengajarNama.size() > 0 && data.pengajarNama.size() <= 100
+        && isValidLatLng(data.lokasi)
+        && data.fotoBase64 is string && data.fotoBase64.size() > 0 && data.fotoBase64.size() <= 900000
+        && isRecentServerTime(data.startedAt);
+    }
+    // Pengajar tap "Stop" sebelum durasi habis — cuma boleh sekali (stoppedAt belum ada),
+    // cuma pemilik sesi, cuma field itu yang berubah.
+    function isValidSessionStop() {
+      return isPengajar() && resource.data.pengajarId == request.auth.uid
+        && !('stoppedAt' in resource.data.keys())
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stoppedAt'])
+        && isRecentServerTime(request.resource.data.stoppedAt);
+    }
+    // Finalisasi sesi (tandai WB yang tidak presensi jadi Alpa) — cuma sekali (finalizedAt belum ada),
+    // cuma pemilik sesi, dan cuma boleh setelah sesi benar2 berakhir (distop manual atau durasi habis).
+    function isValidSessionFinalize() {
+      return isPengajar() && resource.data.pengajarId == request.auth.uid
+        && !('finalizedAt' in resource.data.keys())
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['finalizedAt'])
+        && isRecentServerTime(request.resource.data.finalizedAt)
+        && (('stoppedAt' in resource.data.keys())
+            || request.time >= resource.data.startedAt + duration.value(resource.data.durasiMenit, 'm'));
+    }
+    // Finalisasi otomatis menandai WB yang tidak presensi sebagai Alpa — bukan self-checkin
+    // (bukan WB yang menulis), jadi tanpa foto/lokasi, hanya pengajar pemilik sesi yang boleh.
+    function isValidPengajarAbsentDoc(data) {
+      return data.keys().hasAll(['wbId', 'nama', 'status', 'tanggal', 'sessionId', 'namaMapel', 'recordedBy', 'createdAt'])
+        && data.keys().hasOnly(['wbId', 'nama', 'status', 'tanggal', 'sessionId', 'namaMapel', 'recordedBy', 'createdAt'])
+        && isValidPresensiBase(data)
+        && data.status == 'Alpa'
+        && data.sessionId is string && data.sessionId.size() > 0
+        && data.namaMapel is string && data.namaMapel.size() > 0 && data.namaMapel.size() <= 100
+        && isPengajarOfSession(data.sessionId);
+    }
+    function isValidInvoiceDoc(data) {
+      return data.keys().hasAll(['wbId', 'nama', 'keterangan', 'jumlah', 'jatuhTempo', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['wbId', 'nama', 'keterangan', 'jumlah', 'jatuhTempo', 'status', 'createdAt', 'updatedAt'])
+        && data.wbId is string && data.wbId.size() > 0
+        && data.nama is string && data.nama.size() > 0 && data.nama.size() <= 100
+        && data.keterangan is string && data.keterangan.size() > 0 && data.keterangan.size() <= 200
+        && data.jumlah is number && data.jumlah >= 0
+        && data.jatuhTempo is string && data.jatuhTempo.size() == 10
+        && data.status in ['LUNAS', 'BELUM_LUNAS']
+        && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt);
+    }
+    function isValidInvoiceStatusUpdate() {
+      return isStaff()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && request.resource.data.status in ['LUNAS', 'BELUM_LUNAS']
+        && isRecentServerTime(request.resource.data.updatedAt);
+    }
+    function isValidPendaftarStatusUpdate() {
+      return isStaff()
+        && resource.data.status == 'PENDING'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'verifiedBy', 'updatedAt'])
+        && request.resource.data.status in ['APPROVED', 'REJECTED']
+        && request.resource.data.verifiedBy == request.auth.uid
+        && isRecentServerTime(request.resource.data.updatedAt);
+    }
 
     match /konten/{document} { allow read: if true; allow write: if false; }
 
     match /users/{uid} {
-      allow get: if isOwner(uid) || isSuperadmin() || isAdmin();
-      allow list: if isSuperadmin() || isAdmin();
+      // Pengajar boleh baca profil WB (nama+status saja yang dipakai) buat roster kehadiran
+      // di Jadwal Mengajar — dibatasi resource.data.role == 'wb' jadi tidak bisa lihat admin/pengajar lain.
+      allow get: if isOwner(uid) || isStaff() || (isPengajar() && resource.data.role == 'wb');
+      allow list: if isStaff() || (isPengajar() && resource.data.role == 'wb');
       allow create: if (isSuperadmin() && isValidAdminProfile(request.resource.data))
-        || ((isSuperadmin() || isAdmin()) && isValidWBProfile(request.resource.data));
+        || (isStaff() && (isValidWBProfile(request.resource.data) || isValidPengajarProfile(request.resource.data)));
       allow update: if (isOwner(uid) && isValidLastLoginUpdate())
-        || (isSuperadmin() && isValidAdminStatusUpdate());
-      allow delete: if false;
+        || (isOwner(uid) && isValidSelfContactUpdate())
+        || (isSuperadmin() && isValidAdminStatusUpdate())
+        || isValidWBOrPengajarEdit();
+      // Hapus dokumen profil WB/Pengajar mencabut akses aplikasi (lihat AuthContext).
+      // Akun Firebase Auth di baliknya perlu dibersihkan manual / lewat Admin SDK.
+      allow delete: if isStaff() && resource.data.role in ['wb', 'pengajar'];
     }
 
     match /admins/{uid} {
@@ -121,8 +328,62 @@ service cloud.firestore {
 
     match /news/{newsId} {
       allow get, list: if true;
-      allow create: if (isSuperadmin() || isAdmin()) && isValidNewsDoc(request.resource.data);
+      allow create: if isStaff() && isValidNewsDoc(request.resource.data);
       allow update, delete: if false;
+    }
+
+    // Mapel & jadwal bukan data sensitif — semua pengguna yang login (WB/Pengajar/Staff) boleh baca.
+    match /subjects/{subjectId} {
+      allow get, list: if isSignedIn();
+      allow create: if isStaff() && isValidMapelCreate(request.resource.data);
+      allow update: if isStaff() && isValidMapelUpdate();
+      allow delete: if isStaff();
+    }
+
+    match /schedules/{scheduleId} {
+      allow get, list: if isSignedIn();
+      allow create: if isStaff() && isValidJadwalCreate(request.resource.data);
+      allow update: if isStaff() && isValidJadwalUpdate();
+      allow delete: if isStaff();
+    }
+
+    // WB boleh baca & catat presensi sendiri (checkin mandiri di PresensiWB, wajib sesi aktif);
+    // staff boleh mencatat manual (Izin/Sakit/Alpa/Hadir) untuk siapa saja tanpa sesi/foto.
+    match /presensi/{presensiId} {
+      allow get, list: if isStaff()
+        || (isSignedIn() && resource.data.wbId == request.auth.uid)
+        || (('sessionId' in resource.data.keys()) && isPengajarOfSession(resource.data.sessionId));
+      allow create: if (isStaff() && isValidAdminPresensiDoc(request.resource.data))
+        || (isSignedIn() && isValidSelfCheckinDoc(request.resource.data))
+        || (isSignedIn() && isValidPengajarAbsentDoc(request.resource.data));
+      allow update, delete: if false;
+    }
+
+    // Sesi mengajar: pengajar "Mulai Mengajar" jadi bukti kehadirannya sendiri (foto+lokasi),
+    // sekaligus membuka jendela waktu WB boleh presensi (lihat isClassSessionActive).
+    // Update cuma dua jalur sempit: Stop manual (stoppedAt) dan finalisasi absensi (finalizedAt).
+    match /classSessions/{sessionId} {
+      allow get, list: if isSignedIn();
+      allow create: if isPengajar() && isValidClassSessionDoc(request.resource.data);
+      allow update: if isValidSessionStop() || isValidSessionFinalize();
+      allow delete: if false;
+    }
+
+    // WB boleh baca tagihan sendiri; hanya staff yang boleh membuat/mengubah status.
+    match /invoices/{invoiceId} {
+      allow get, list: if isStaff() || (isSignedIn() && resource.data.wbId == request.auth.uid);
+      allow create: if isStaff() && isValidInvoiceDoc(request.resource.data);
+      allow update: if isValidInvoiceStatusUpdate();
+      allow delete: if false;
+    }
+
+    // Formulir pendaftaran publik (RegistrationPage) belum menulis ke Firestore
+    // (masih TODO di kode). Baca & verifikasi status sudah disiapkan; rule "create"
+    // publik ditambahkan begitu formulir itu benar-benar dihubungkan ke Firestore.
+    match /registrations/{regId} {
+      allow get, list: if isStaff();
+      allow update: if isValidPendaftarStatusUpdate();
+      allow create, delete: if false;
     }
 
     match /{document=**} { allow read, write: if false; }

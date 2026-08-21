@@ -1,29 +1,176 @@
-// src/layouts/PengajarLayout.jsx
-import { Outlet, Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+    faChartPie,
+    faCalendarDays,
+    faUser,
+    faChevronLeft,
+    faChevronRight,
+    faBars,
+    faXmark,
+    faMagnifyingGlass,
+    faRightFromBracket,
+} from '@fortawesome/free-solid-svg-icons';
+import { signOut } from 'firebase/auth';
+import { auth } from '../config/firebase';
+import { useAuth } from '../context/AuthContext';
+import LogoPKBM from '../assets/logo.png';
+import ThemeToggle from '../components/common/ThemeToggle';
 
 export const PengajarLayout = () => {
+    const { currentUser } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [collapsed, setCollapsed] = useState(false);
+
+    const handleLogout = async () => {
+        await signOut(auth);
+        navigate('/login', { replace: true });
+    };
+
+    const navItems = [
+        { path: '/pengajar/dashboard', label: 'Dashboard', icon: faChartPie },
+        { path: '/pengajar/jadwal', label: 'Jadwal Mengajar', icon: faCalendarDays },
+        { path: '/pengajar/profil', label: 'Profil Saya', icon: faUser },
+    ];
+
+    const isActive = (path) => location.pathname === path;
+    const displayName = currentUser?.nama || 'Pengajar';
+    const initials = displayName.trim().charAt(0).toUpperCase() || 'P';
+
+    const renderNavItem = (item) => (
+        <Link
+            key={item.path}
+            to={item.path}
+            onClick={() => setSidebarOpen(false)}
+            title={collapsed ? item.label : undefined}
+            className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                isActive(item.path)
+                    ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 font-semibold'
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-100'
+            }`}
+        >
+            <FontAwesomeIcon icon={item.icon} className="w-4 h-4 shrink-0" />
+            {!collapsed && <span>{item.label}</span>}
+        </Link>
+    );
+
     return (
-        <div className="flex h-screen bg-gray-50">
-            {/* Sidebar Pengajar */}
-            <aside className="w-64 bg-orange-700 text-white p-5 flex flex-col">
-                <h2 className="text-2xl font-bold mb-8">Panel Pengajar</h2>
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex font-sans text-slate-800 dark:text-slate-100 transition-colors">
+            {sidebarOpen && (
+                <div
+                    className="fixed inset-0 bg-slate-900/40 z-30 md:hidden"
+                    onClick={() => setSidebarOpen(false)}
+                />
+            )}
 
-                <nav className="flex flex-col gap-4 flex-1">
-                    <Link to="/pengajar/dashboard" className="hover:text-orange-200 font-medium">Dashboard</Link>
-                    <Link to="/pengajar/jadwal" className="hover:text-orange-200 font-medium">Jadwal Mengajar</Link>
-                    <Link to="/pengajar/profil" className="hover:text-orange-200 font-medium">Profil Saya</Link>
-                </nav>
+            <aside
+                className={`fixed md:static inset-y-0 left-0 z-40 w-64 ${collapsed ? 'md:w-20' : 'md:w-64'} bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-all duration-200 ease-in-out flex flex-col justify-between ${
+                    sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+                }`}
+            >
+                <div className="p-4 overflow-y-auto flex-1">
+                    <div className={`flex items-center mb-8 pb-4 border-b border-slate-100 dark:border-slate-800 ${collapsed ? 'justify-center' : 'justify-between'}`}>
+                        <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
+                            <img
+                                src={LogoPKBM}
+                                alt="Logo PKBM KARTINI"
+                                className="w-10 h-10 shrink-0 rounded-2xl object-contain bg-white ring-1 ring-slate-100 dark:ring-slate-700"
+                            />
+                            {!collapsed && (
+                                <div>
+                                    <h2 className="font-bold text-slate-900 dark:text-white leading-tight">PKBM KARTINI</h2>
+                                    <p className="text-xs text-slate-400">Portal Pengajar</p>
+                                </div>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => setCollapsed(!collapsed)}
+                            className="hidden md:flex w-7 h-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                        >
+                            <FontAwesomeIcon icon={collapsed ? faChevronRight : faChevronLeft} className="w-3 h-3" />
+                        </button>
+                    </div>
 
-                {/* Tombol Logout (sementara mengarah ke halaman home) */}
-                <div className="mt-auto pt-4 border-t border-orange-600">
-                    <Link to="/" className="text-orange-200 hover:text-white font-medium">Logout</Link>
+                    <div>
+                        {!collapsed && (
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-3">
+                                Menu Pengajar
+                            </p>
+                        )}
+                        <nav className="space-y-1">
+                            {navItems.map((item) => renderNavItem(item))}
+                        </nav>
+                    </div>
+                </div>
+
+                <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+                    <div className={`flex items-center gap-2 ${collapsed ? 'justify-center' : 'justify-between'}`}>
+                        {!collapsed && (
+                            <div className="flex items-center gap-2 min-w-0">
+                                <div className="w-9 h-9 shrink-0 rounded-full bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 font-bold flex items-center justify-center text-sm">
+                                    {initials}
+                                </div>
+                                <div className="truncate">
+                                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{displayName}</p>
+                                    <p className="text-xs text-slate-400 truncate">{currentUser?.email}</p>
+                                </div>
+                            </div>
+                        )}
+                        <button
+                            onClick={handleLogout}
+                            title="Keluar Sesi"
+                            className="p-2 rounded-lg text-slate-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-all shrink-0"
+                        >
+                            <FontAwesomeIcon icon={faRightFromBracket} className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
             </aside>
 
-            {/* Konten Utama */}
-            <main className="flex-1 p-8 overflow-y-auto">
-                <Outlet />
-            </main>
+            <div className="flex-1 flex flex-col min-w-0">
+                <header className="h-16 md:h-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 md:px-8 flex items-center justify-between gap-4 sticky top-0 z-20 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <button
+                            onClick={() => setSidebarOpen(!sidebarOpen)}
+                            className="md:hidden p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0"
+                        >
+                            <FontAwesomeIcon icon={sidebarOpen ? faXmark : faBars} className="w-4 h-4" />
+                        </button>
+                        <div className="min-w-0">
+                            <p className="text-xs text-slate-400 truncate">Selamat datang,</p>
+                            <p className="text-sm md:text-base font-bold text-slate-900 dark:text-white truncate">{displayName}</p>
+                        </div>
+                    </div>
+
+                    <div className="hidden md:flex flex-1 max-w-md items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2.5">
+                        <FontAwesomeIcon icon={faMagnifyingGlass} className="text-slate-400 w-4 h-4" />
+                        <input
+                            type="text"
+                            placeholder="Cari sesuatu"
+                            className="bg-transparent outline-none text-sm text-slate-600 dark:text-slate-200 placeholder:text-slate-400 w-full"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                        <ThemeToggle />
+                        <span className="hidden sm:inline-block text-xs font-bold uppercase px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
+                            Pengajar
+                        </span>
+                        <div className="w-9 h-9 rounded-full bg-red-600 text-white font-bold flex items-center justify-center text-sm">
+                            {initials}
+                        </div>
+                    </div>
+                </header>
+
+                <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden">
+                    <Outlet />
+                </main>
+            </div>
         </div>
     );
 };
+
+export default PengajarLayout;

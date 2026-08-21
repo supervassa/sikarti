@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
 import LogoPKBM from '../../assets/logo.png'; // Pastikan path dan file logo benar
 
@@ -7,10 +11,17 @@ const LoginPage = () => {
     // State untuk form
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     // State untuk status UI
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
+
+    // State untuk modal lupa password
+    const [isResetOpen, setIsResetOpen] = useState(false);
+    const [resetEmail, setResetEmail] = useState('');
+    const [resetStatus, setResetStatus] = useState('');
+    const [resetLoading, setResetLoading] = useState(false);
 
     const navigate = useNavigate();
     const { loginWithGoogle, loginWithEmail, currentUser } = useAuth();
@@ -36,7 +47,7 @@ const LoginPage = () => {
         try {
             await loginWithEmail(email, password);
             // Redirect otomatis diurus oleh useEffect di atas jika berhasil
-        } catch (error) {
+        } catch {
             setErrorMsg("Email atau Password salah, atau akun tidak terdaftar.");
             setIsLoading(false);
         }
@@ -48,9 +59,30 @@ const LoginPage = () => {
         try {
             await loginWithGoogle();
             // Redirect otomatis diurus oleh useEffect di atas jika berhasil
-        } catch (error) {
+        } catch {
             setErrorMsg("Login Google dibatalkan atau data akun Anda tidak valid.");
             setIsLoading(false);
+        }
+    };
+
+    const openResetModal = () => {
+        setResetEmail(email);
+        setResetStatus('');
+        setIsResetOpen(true);
+    };
+
+    const handleResetPassword = async (e) => {
+        e.preventDefault();
+        setResetLoading(true);
+        setResetStatus('');
+        try {
+            await sendPasswordResetEmail(auth, resetEmail.trim().toLowerCase());
+            setResetStatus('success');
+        } catch {
+            // Pesan generik dijaga sama walau email tidak terdaftar, supaya tidak bocorin data akun.
+            setResetStatus('success');
+        } finally {
+            setResetLoading(false);
         }
     };
 
@@ -94,16 +126,32 @@ const LoginPage = () => {
                         <div>
                             <div className="flex justify-between items-center mb-1">
                                 <label className="block text-sm font-medium text-gray-700">Password</label>
-                                <a href="#" className="text-xs font-medium text-red-600 hover:text-red-500">Lupa password?</a>
+                                <button
+                                    type="button"
+                                    onClick={openResetModal}
+                                    className="text-xs font-medium text-red-600 hover:text-red-500"
+                                >
+                                    Lupa password?
+                                </button>
                             </div>
-                            <input
-                                type="password"
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
-                                placeholder="••••••••"
-                            />
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                                    placeholder="••••••••"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword((prev) => !prev)}
+                                    tabIndex={-1}
+                                    className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600"
+                                >
+                                    <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
 
                         <button
@@ -151,6 +199,64 @@ const LoginPage = () => {
                 </div>
 
             </div>
+
+            {/* Modal Lupa Password */}
+            {isResetOpen && (
+                <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
+                        <h2 className="text-lg font-bold text-gray-900">Reset Password</h2>
+                        {resetStatus === 'success' ? (
+                            <>
+                                <p className="text-sm text-gray-600">
+                                    Jika <span className="font-semibold">{resetEmail}</span> terdaftar, tautan reset password sudah dikirim ke email tersebut. Cek juga folder spam.
+                                </p>
+                                <div className="flex justify-end pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsResetOpen(false)}
+                                        className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700"
+                                    >
+                                        Tutup
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <form onSubmit={handleResetPassword} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                    <input
+                                        required
+                                        type="email"
+                                        value={resetEmail}
+                                        onChange={(e) => setResetEmail(e.target.value)}
+                                        placeholder="nama@email.com"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                                    />
+                                    <p className="mt-1.5 text-xs text-gray-500">
+                                        Kami akan mengirim tautan reset password ke email ini.
+                                    </p>
+                                </div>
+                                <div className="flex justify-end space-x-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsResetOpen(false)}
+                                        className="px-4 py-2 text-sm text-gray-600 font-semibold"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={resetLoading}
+                                        className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 disabled:opacity-60"
+                                    >
+                                        {resetLoading ? 'Mengirim…' : 'Kirim Tautan Reset'}
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

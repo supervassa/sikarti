@@ -1,3 +1,34 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* react-time-picker — dibuat senada dengan input form lain (border rounded-lg, dark mode). */
+.pkbm-time-picker.react-time-picker {
+    display: block;
+    width: 100%;
+}
+.pkbm-time-picker .react-time-picker__wrapper {
+    border: 1px solid rgb(226 232 240); /* slate-200 */
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+}
+.dark .pkbm-time-picker .react-time-picker__wrapper {
+    border-color: rgb(51 65 85); /* slate-700 */
+}
+.pkbm-time-picker .react-time-picker__inputGroup__input {
+    color: rgb(15 23 42); /* slate-900 */
+}
+.dark .pkbm-time-picker .react-time-picker__inputGroup__input {
+    color: rgb(241 245 249); /* slate-100 */
+}
+.pkbm-time-picker .react-time-picker__inputGroup__divider,
+.pkbm-time-picker .react-time-picker__clock-button svg {
+    color: rgb(100 116 139); /* slate-500 */
+}
+.pkbm-time-picker .react-time-picker__clock-button svg path {
+    stroke: rgb(100 116 139);
+}
+.pkbm-time-clock.react-clock {
+    z-index: 60;
+}

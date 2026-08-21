@@ -1,5 +1,5 @@
 import { db } from '../config/firebase';
-import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, getDocs, query, runTransaction, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import { createAuditLog } from './adminServices';
 
 export const classSessionId = (scheduleId, tanggal) => `${scheduleId}_${tanggal}`;
@@ -41,4 +41,36 @@ export const startClassSession = async (schedule, tanggal, currentUser, { fotoBa
 
     await createAuditLog(currentUser, 'CREATE', 'SESI_KELAS', id, { namaMapel: schedule.namaMapel, tanggal });
     return id;
+};
+
+// Pengajar tap "Stop" sebelum durasi habis. Kalau lupa stop, sesi tetap jalan sampai
+// durasinya habis sendiri — baik lewat Stop atau habis waktu, finalizeAbsentees yang
+// benar-benar mencatat kehadiran (lihat di bawah).
+export const stopClassSession = async (session, currentUser) => {
+    await updateDoc(doc(db, 'classSessions', session.id), { stoppedAt: serverTimestamp() });
+    await createAuditLog(currentUser, 'UPDATE', 'SESI_KELAS', session.id, { action: 'stop', namaMapel: session.namaMapel });
+};
+
+// Dipanggil sekali setelah sesi berakhir (distop atau durasi habis): WB aktif di paket ini
+// yang belum presensi Hadir untuk sesi ini otomatis dicatat Alpa. finalizedAt jadi penanda
+// idempoten di rules — percobaan kedua (mis. dua tab dibuka bareng) otomatis gagal ditolak.
+export const finalizeAbsentees = async (session, wbAktifPaketIni, currentUser) => {
+    const presensiSnap = await getDocs(query(collection(db, 'presensi'), where('sessionId', '==', session.id)));
+    const sudahHadir = new Set(presensiSnap.docs.map((d) => d.data().wbId));
+    const absen = wbAktifPaketIni.filter((wb) => !sudahHadir.has(wb.id));
+
+    await updateDoc(doc(db, 'classSessions', session.id), { finalizedAt: serverTimestamp() });
+
+    await Promise.all(absen.map((wb) => addDoc(collection(db, 'presensi'), {
+        wbId: wb.id,
+        nama: wb.nama,
+        status: 'Alpa',
+        tanggal: session.tanggal,
+        sessionId: session.id,
+        namaMapel: session.namaMapel,
+        recordedBy: currentUser.uid,
+        createdAt: serverTimestamp(),
+    })));
+
+    await createAuditLog(currentUser, 'UPDATE_STATUS', 'SESI_KELAS', session.id, { action: 'finalize', absentCount: absen.length });
 };

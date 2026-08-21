@@ -8,11 +8,13 @@ import {
     faNewspaper,
 } from '@fortawesome/free-solid-svg-icons';
 import { db } from '../../config/firebase';
+import { useAuth } from '../../context/AuthContext';
 
 const displayTime = (value) =>
     value?.toDate ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(value.toDate()) : '-';
 
 const DashboardOverviewPage = () => {
+    const { role } = useAuth();
     const [totalWB, setTotalWB] = useState(0);
     const [totalPengajar, setTotalPengajar] = useState(0);
     const [pendaftarPending, setPendaftarPending] = useState(0);
@@ -24,15 +26,18 @@ const DashboardOverviewPage = () => {
         const stopPengajar = onSnapshot(query(collection(db, 'users'), where('kd_role', '==', 33)), (snap) => setTotalPengajar(snap.size));
         const stopPendaftar = onSnapshot(query(collection(db, 'registrations'), where('status', '==', 'PENDING')), (snap) => setPendaftarPending(snap.size));
         const stopBerita = onSnapshot(collection(db, 'news'), (snap) => setTotalBerita(snap.size));
-        const stopLogs = onSnapshot(collection(db, 'auditLogs'), (snap) => {
-            const items = snap.docs
-                .map((item) => ({ id: item.id, ...item.data() }))
-                .sort((a, b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0))
-                .slice(0, 6);
-            setLogs(items);
-        });
+        // Firestore rules batasi baca auditLogs khusus superadmin.
+        const stopLogs = role === 'superadmin'
+            ? onSnapshot(collection(db, 'auditLogs'), (snap) => {
+                const items = snap.docs
+                    .map((item) => ({ id: item.id, ...item.data() }))
+                    .sort((a, b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0))
+                    .slice(0, 6);
+                setLogs(items);
+            })
+            : () => {};
         return () => { stopWB(); stopPengajar(); stopPendaftar(); stopBerita(); stopLogs(); };
-    }, []);
+    }, [role]);
 
     const cards = [
         { label: 'Warga Belajar Aktif', value: totalWB, icon: faGraduationCap, accent: 'bg-blue-50 text-blue-700' },
@@ -60,28 +65,30 @@ const DashboardOverviewPage = () => {
                 ))}
             </div>
 
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-                <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800">
-                    <h2 className="font-bold text-slate-900 dark:text-white">Aktivitas Terbaru</h2>
-                </div>
-                <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {logs.length === 0 ? (
-                        <p className="p-6 text-sm text-slate-400">Belum ada aktivitas tercatat.</p>
-                    ) : (
-                        logs.map((log) => (
-                            <div key={log.id} className="flex gap-3 px-6 py-4">
-                                <span className="mt-1 h-fit rounded-lg bg-red-50 dark:bg-red-500/10 px-2 py-1 text-[10px] font-bold text-red-700 dark:text-red-400">
-                                    {log.action}
-                                </span>
-                                <div>
-                                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{log.performedByName || 'Pengguna'}</p>
-                                    <p className="text-xs text-slate-400">{log.module} · {displayTime(log.timestamp)}</p>
+            {role === 'superadmin' && (
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                    <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+                        <h2 className="font-bold text-slate-900 dark:text-white">Aktivitas Terbaru</h2>
+                    </div>
+                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {logs.length === 0 ? (
+                            <p className="p-6 text-sm text-slate-400">Belum ada aktivitas tercatat.</p>
+                        ) : (
+                            logs.map((log) => (
+                                <div key={log.id} className="flex gap-3 px-6 py-4">
+                                    <span className="mt-1 h-fit rounded-lg bg-red-50 dark:bg-red-500/10 px-2 py-1 text-[10px] font-bold text-red-700 dark:text-red-400">
+                                        {log.action}
+                                    </span>
+                                    <div>
+                                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{log.performedByName || 'Pengguna'}</p>
+                                        <p className="text-xs text-slate-400">{log.module} · {displayTime(log.timestamp)}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        ))
-                    )}
+                            ))
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
         </section>
     );
 };

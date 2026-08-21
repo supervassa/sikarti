@@ -1,74 +1,186 @@
 import React, { useState } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+    faChartPie,
+    faCalendarDays,
+    faCamera,
+    faClockRotateLeft,
+    faBookOpen,
+    faCreditCard,
+    faUser,
+    faChevronLeft,
+    faChevronRight,
+    faBars,
+    faXmark,
+    faMagnifyingGlass,
+    faRightFromBracket,
+} from '@fortawesome/free-solid-svg-icons';
+import { signOut } from 'firebase/auth';
+import { auth } from '../config/firebase';
+import { useAuth } from '../context/AuthContext';
+import LogoPKBM from '../assets/logo.png';
+import ThemeToggle from '../components/common/ThemeToggle';
 
 const WBLayout = () => {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const { currentUser } = useAuth();
+    const navigate = useNavigate();
     const location = useLocation();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [collapsed, setCollapsed] = useState(false);
 
-    const menuItems = [
-        { path: '/wb/dashboard', icon: '🏠', label: 'Dashboard' },
-        { path: '/wb/jadwal', icon: '📅', label: 'Jadwal Pelajaran' },
-        { path: '/wb/presensi', icon: '📷', label: 'Scan Presensi' },
-        { path: '/wb/riwayat-kehadiran', icon: '⏱️', label: 'Riwayat Kehadiran' },
-        { path: '/wb/informasi-studi', icon: '📚', label: 'Informasi Studi' },
-        { path: '/wb/tagihan', icon: '💳', label: 'Tagihan' },
-        { path: '/wb/profil', icon: '👤', label: 'Profil Saya' },
+    const handleLogout = async () => {
+        await signOut(auth);
+        navigate('/login', { replace: true });
+    };
+
+    const navItems = [
+        { path: '/wb/dashboard', label: 'Dashboard', icon: faChartPie },
+        { path: '/wb/jadwal', label: 'Jadwal Pelajaran', icon: faCalendarDays },
+        { path: '/wb/presensi', label: 'Scan Presensi', icon: faCamera },
+        { path: '/wb/riwayat-kehadiran', label: 'Riwayat Kehadiran', icon: faClockRotateLeft },
+        { path: '/wb/informasi-studi', label: 'Informasi Studi', icon: faBookOpen },
+        { path: '/wb/tagihan', label: 'Tagihan', icon: faCreditCard },
+        { path: '/wb/profil', label: 'Profil Saya', icon: faUser },
     ];
 
-    return (
-        <div className="flex h-screen bg-gray-100 font-sans text-gray-800">
+    const isActive = (path) => location.pathname === path;
+    const displayName = currentUser?.nama || 'Warga Belajar';
+    const initials = displayName.trim().charAt(0).toUpperCase() || 'W';
 
-            {/* Sidebar untuk Desktop */}
-            <aside className={`bg-[#0b1f3d] text-white w-64 flex-shrink-0 hidden md:flex flex-col transition-transform duration-300`}>
-                <div className="p-4 flex items-center justify-center border-b border-gray-700">
-                    <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center font-bold mr-2">K</div>
-                    <span className="text-lg font-bold">Portal WB</span>
+    const renderNavItem = (item) => (
+        <Link
+            key={item.path}
+            to={item.path}
+            onClick={() => setSidebarOpen(false)}
+            title={collapsed ? item.label : undefined}
+            className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                isActive(item.path)
+                    ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 font-semibold'
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-100'
+            }`}
+        >
+            <FontAwesomeIcon icon={item.icon} className="w-4 h-4 shrink-0" />
+            {!collapsed && <span>{item.label}</span>}
+        </Link>
+    );
+
+    return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex font-sans text-slate-800 dark:text-slate-100 transition-colors">
+            {/* Overlay Mobile */}
+            {sidebarOpen && (
+                <div
+                    className="fixed inset-0 bg-slate-900/40 z-30 md:hidden"
+                    onClick={() => setSidebarOpen(false)}
+                />
+            )}
+
+            {/* Sidebar Navigation */}
+            <aside
+                className={`fixed md:static inset-y-0 left-0 z-40 w-64 ${collapsed ? 'md:w-20' : 'md:w-64'} bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-all duration-200 ease-in-out flex flex-col justify-between ${
+                    sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+                }`}
+            >
+                <div className="p-4 overflow-y-auto flex-1">
+                    {/* Header Logo */}
+                    <div className={`flex items-center mb-8 pb-4 border-b border-slate-100 dark:border-slate-800 ${collapsed ? 'justify-center' : 'justify-between'}`}>
+                        <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
+                            <img
+                                src={LogoPKBM}
+                                alt="Logo PKBM KARTINI"
+                                className="w-10 h-10 shrink-0 rounded-2xl object-contain bg-white ring-1 ring-slate-100 dark:ring-slate-700"
+                            />
+                            {!collapsed && (
+                                <div>
+                                    <h2 className="font-bold text-slate-900 dark:text-white leading-tight">PKBM KARTINI</h2>
+                                    <p className="text-xs text-slate-400">Portal Warga Belajar</p>
+                                </div>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => setCollapsed(!collapsed)}
+                            className="hidden md:flex w-7 h-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                        >
+                            <FontAwesomeIcon icon={collapsed ? faChevronRight : faChevronLeft} className="w-3 h-3" />
+                        </button>
+                    </div>
+
+                    <div>
+                        {!collapsed && (
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-3">
+                                Menu Warga Belajar
+                            </p>
+                        )}
+                        <nav className="space-y-1">
+                            {navItems.map((item) => renderNavItem(item))}
+                        </nav>
+                    </div>
                 </div>
-                <nav className="flex-1 overflow-y-auto py-4">
-                    <ul className="space-y-1">
-                        {menuItems.map((item) => (
-                            <li key={item.path}>
-                                <Link
-                                    to={item.path}
-                                    className={`flex items-center px-6 py-3 hover:bg-gray-800 transition-colors ${location.pathname === item.path ? 'bg-red-600 border-l-4 border-white' : ''}`}
-                                >
-                                    <span className="mr-3">{item.icon}</span>
-                                    <span className="text-sm font-medium">{item.label}</span>
-                                </Link>
-                            </li>
-                        ))}
-                    </ul>
-                </nav>
-                <div className="p-4 border-t border-gray-700">
-                    <button className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-gray-800 rounded transition-colors">
-                        <span className="mr-3">🚪</span> Logout
-                    </button>
+
+                {/* Footer User Info & Logout */}
+                <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+                    <div className={`flex items-center gap-2 ${collapsed ? 'justify-center' : 'justify-between'}`}>
+                        {!collapsed && (
+                            <div className="flex items-center gap-2 min-w-0">
+                                <div className="w-9 h-9 shrink-0 rounded-full bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 font-bold flex items-center justify-center text-sm">
+                                    {initials}
+                                </div>
+                                <div className="truncate">
+                                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{displayName}</p>
+                                    <p className="text-xs text-slate-400 truncate">{currentUser?.email}</p>
+                                </div>
+                            </div>
+                        )}
+                        <button
+                            onClick={handleLogout}
+                            title="Keluar Sesi"
+                            className="p-2 rounded-lg text-slate-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-all shrink-0"
+                        >
+                            <FontAwesomeIcon icon={faRightFromBracket} className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
             </aside>
 
-            {/* Konten Utama */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-
-                {/* Topbar (Mobile Hamburger & Info User) */}
-                <header className="bg-white shadow-sm flex items-center justify-between px-4 py-3 z-10">
-                    <div className="flex items-center">
-                        {/* Tombol menu mobile (sementara kita buat tombolnya saja) */}
+            {/* Kolom Konten Utama */}
+            <div className="flex-1 flex flex-col min-w-0">
+                {/* Top Bar */}
+                <header className="h-16 md:h-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 md:px-8 flex items-center justify-between gap-4 sticky top-0 z-20 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
                         <button
-                            className="md:hidden mr-4 text-gray-600 hover:text-gray-900"
-                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                            onClick={() => setSidebarOpen(!sidebarOpen)}
+                            className="md:hidden p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0"
                         >
-                            ☰
+                            <FontAwesomeIcon icon={sidebarOpen ? faXmark : faBars} className="w-4 h-4" />
                         </button>
-                        <h1 className="text-xl font-bold text-gray-800 hidden sm:block">Warga Belajar PKBM KARTINI</h1>
+                        <div className="min-w-0">
+                            <p className="text-xs text-slate-400 truncate">Selamat datang,</p>
+                            <p className="text-sm md:text-base font-bold text-slate-900 dark:text-white truncate">{displayName}</p>
+                        </div>
                     </div>
-                    <div className="flex items-center space-x-3">
-                        <span className="text-sm font-medium text-gray-700">Halo, Ahmad (Paket C)</span>
-                        <div className="w-10 h-10 bg-gray-200 rounded-full border border-gray-300"></div>
+
+                    <div className="hidden md:flex flex-1 max-w-md items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2.5">
+                        <FontAwesomeIcon icon={faMagnifyingGlass} className="text-slate-400 w-4 h-4" />
+                        <input
+                            type="text"
+                            placeholder="Cari sesuatu"
+                            className="bg-transparent outline-none text-sm text-slate-600 dark:text-slate-200 placeholder:text-slate-400 w-full"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                        <ThemeToggle />
+                        <span className="hidden sm:inline-block text-xs font-bold uppercase px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
+                            Warga Belajar
+                        </span>
+                        <div className="w-9 h-9 rounded-full bg-red-600 text-white font-bold flex items-center justify-center text-sm">
+                            {initials}
+                        </div>
                     </div>
                 </header>
 
-                {/* Area Konten Dinamis (Outlet) */}
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 md:p-6">
+                {/* Konten Halaman */}
+                <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden">
                     <Outlet />
                 </main>
             </div>

@@ -45,9 +45,13 @@ export const AuthProvider = ({ children }) => {
                 const userData = userSnap.data();
                 const role = normalizeRole(userData.role, userData.kd_role);
 
-                // Cek apakah akun aktif
-                if (userData.status === false) {
+                // Cek apakah akun aktif. Admin/Pengajar pakai status boolean;
+                // WB pakai status 3-state (AKTIF/NONAKTIF/LULUS) sejak fitur status keanggotaan.
+                if (userData.status === false || userData.status === 'NONAKTIF') {
                     throw new Error("Akun Anda dinonaktifkan. Silakan hubungi Admin.");
+                }
+                if (userData.status === 'LULUS') {
+                    throw new Error("Akun Anda berstatus Lulus dan tidak lagi memiliki akses ke portal ini.");
                 }
 
                 // Catat last login ke Firestore dengan Server Timestamp

@@ -23,51 +23,54 @@ const TagihanWB = () => {
     const totalTunggakan = belumLunas.reduce((sum, t) => sum + (t.jumlah || 0), 0);
 
     return (
-        <div className="space-y-6">
+        <section className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">Informasi Tagihan</h1>
-                <p className="text-gray-500 mt-1">Riwayat dan status pembayaran Anda.</p>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Informasi Tagihan</h1>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Riwayat dan status pembayaran Anda.</p>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border p-6 border-l-4 border-l-red-600 max-w-xs">
-                <h3 className="text-gray-500 text-sm font-medium">Total Tunggakan</h3>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{formatRupiah(totalTunggakan)}</p>
-                <p className="text-xs text-gray-400 mt-1">{belumLunas.length} tagihan belum lunas</p>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 max-w-xs">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 font-bold">Rp</div>
+                <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Total Tunggakan</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatRupiah(totalTunggakan)}</p>
+                <p className="text-xs text-slate-400 mt-1">{belumLunas.length} tagihan belum lunas</p>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                <table className="w-full text-left text-sm">
-                    <thead className="bg-gray-50 border-b text-gray-500 text-xs uppercase font-semibold">
-                    <tr>
-                        <th className="px-6 py-3">Keterangan</th>
-                        <th className="px-4 py-3">Jumlah</th>
-                        <th className="px-4 py-3">Jatuh Tempo</th>
-                        <th className="px-4 py-3">Status</th>
-                    </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                    {loading ? (
-                        <tr><td colSpan="4" className="text-center py-8 text-gray-400">Memuat data tagihan...</td></tr>
-                    ) : tagihan.length === 0 ? (
-                        <tr><td colSpan="4" className="text-center py-8 text-gray-400">Belum ada tagihan.</td></tr>
-                    ) : (
-                        tagihan.map((t) => (
-                            <tr key={t.id}>
-                                <td className="px-6 py-3 text-gray-700">{t.keterangan}</td>
-                                <td className="px-4 py-3 font-semibold text-gray-800">{formatRupiah(t.jumlah)}</td>
-                                <td className="px-4 py-3 text-gray-500">{t.jatuhTempo}</td>
-                                <td className="px-4 py-3">
-                                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${t.status === 'LUNAS' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                                        {t.status === 'LUNAS' ? 'Lunas' : 'Belum Lunas'}
-                                    </span>
-                                </td>
-                            </tr>
-                        ))
-                    )}
-                    </tbody>
-                </table>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs uppercase font-semibold">
+                        <tr>
+                            <th className="px-6 py-4">Keterangan</th>
+                            <th className="px-4 py-4">Jumlah</th>
+                            <th className="px-4 py-4">Jatuh Tempo</th>
+                            <th className="px-4 py-4">Status</th>
+                        </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {loading ? (
+                            <tr><td colSpan="4" className="text-center py-8 text-slate-400">Memuat data tagihan...</td></tr>
+                        ) : tagihan.length === 0 ? (
+                            <tr><td colSpan="4" className="text-center py-8 text-slate-400">Belum ada tagihan.</td></tr>
+                        ) : (
+                            tagihan.map((t) => (
+                                <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                    <td className="px-6 py-4 text-slate-700 dark:text-slate-200">{t.keterangan}</td>
+                                    <td className="px-4 py-4 font-semibold text-slate-800 dark:text-slate-100">{formatRupiah(t.jumlah)}</td>
+                                    <td className="px-4 py-4 text-slate-500 dark:text-slate-400">{t.jatuhTempo}</td>
+                                    <td className="px-4 py-4">
+                                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${t.status === 'LUNAS' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'}`}>
+                                            {t.status === 'LUNAS' ? 'Lunas' : 'Belum Lunas'}
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
+        </section>
     );
 };
 

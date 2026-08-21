@@ -5,7 +5,7 @@ import { db, firebaseConfig } from '../config/firebase.js';
 
 const secondaryAppName = 'admin-account-creator';
 
-const getSecondaryAuth = () => {
+export const getSecondaryAuth = () => {
     const app = getApps().find((item) => item.name === secondaryAppName)
         || initializeApp(firebaseConfig, secondaryAppName);
     return getAuth(app);

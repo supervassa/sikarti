@@ -4,6 +4,8 @@ const PHOTO_WIDTH = 480;
 
 // Modal kamera + geolokasi dipakai bareng WB (checkin) dan Pengajar (mulai mengajar).
 // Wajib foto + lokasi sebelum bisa submit — itu inti bukti kehadirannya.
+const geoSupported = typeof navigator !== 'undefined' && !!navigator.geolocation;
+
 const CaptureAttendanceModal = ({ title, subtitle, watermarkLabel, onCancel, onSubmit }) => {
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
@@ -25,21 +27,17 @@ const CaptureAttendanceModal = ({ title, subtitle, watermarkLabel, onCancel, onS
     };
 
     useEffect(() => {
-        if (!navigator.geolocation) {
-            setLocationError('Perangkat/browser ini tidak mendukung lokasi.');
-        } else {
+        if (geoSupported) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
                 () => setLocationError('Gagal mengambil lokasi. Aktifkan izin lokasi lalu coba lagi.'),
                 { enableHighAccuracy: true, timeout: 10000 }
             );
         }
-
         startCamera();
         return () => {
             streamRef.current?.getTracks().forEach((t) => t.stop());
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const takePhoto = () => {
@@ -103,8 +101,9 @@ const CaptureAttendanceModal = ({ title, subtitle, watermarkLabel, onCancel, onS
 
                 <div className="space-y-1">
                     {cameraError && <p className="text-xs text-rose-600">{cameraError}</p>}
-                    {locationError && <p className="text-xs text-rose-600">{locationError}</p>}
-                    {!locationError && !location && <p className="text-xs text-slate-400">Mengambil lokasi…</p>}
+                    {!geoSupported && <p className="text-xs text-rose-600">Perangkat/browser ini tidak mendukung lokasi.</p>}
+                    {geoSupported && locationError && <p className="text-xs text-rose-600">{locationError}</p>}
+                    {geoSupported && !locationError && !location && <p className="text-xs text-slate-400">Mengambil lokasi…</p>}
                     {location && <p className="text-xs text-emerald-600">Lokasi didapat ({location.lat.toFixed(5)}, {location.lng.toFixed(5)})</p>}
                     {submitError && <p className="text-xs text-rose-600">{submitError}</p>}
                 </div>

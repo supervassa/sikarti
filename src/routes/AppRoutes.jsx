@@ -21,8 +21,26 @@ import SuperadminDashboard from '../pages/superadmin/SuperadminDashboard';
 import AdminManagementPage from '../pages/superadmin/AdminManagementPage';
 
 // Pages - Admin & Superadmin Joint Features (Tahap 5)
+import DashboardOverviewPage from '../pages/admin/DashboardOverviewPage';
 import WBManagementPage from '../pages/admin/WBManagementPage';
+import PengajarManagementPage from '../pages/admin/PengajarManagementPage';
+import AkademikPage from '../pages/admin/AkademikPage';
+import PendaftarPage from '../pages/admin/PendaftarPage';
 import BeritaManagementPage from '../pages/admin/BeritaManagementPage';
+import PresensiPage from '../pages/admin/PresensiPage';
+import KeuanganPage from '../pages/admin/KeuanganPage';
+import WBLayout from "../layouts/WBLayout.jsx";
+import DashboardWB from "../pages/wb/DashboardWB.jsx";
+import JadwalWB from "../pages/wb/JadwalWB.jsx";
+import PresensiWB from "../pages/wb/PresensiWB.jsx";
+import RiwayatKehadiranWB from "../pages/wb/RiwayatKehadiranWB.jsx";
+import InformasiStudiWB from "../pages/wb/InformasiStudiWB.jsx";
+import TagihanWB from "../pages/wb/TagihanWB.jsx";
+import ProfilWB from "../pages/wb/ProfilWB.jsx";
+import PengajarLayout from "../layouts/PengajarLayout.jsx";
+import DashboardPengajar from "../pages/pengajar/DashboardPengajar.jsx";
+import JadwalPengajar from "../pages/pengajar/JadwalPengajar.jsx";
+import ProfilPengajar from "../pages/pengajar/ProfilPengajar.jsx";
 
 const AppRoutes = () => {
     return (
@@ -57,9 +75,14 @@ const AppRoutes = () => {
                     </ProtectedRoute>
                 }
             >
-                <Route path="/admin/dashboard" element={<WBManagementPage />} />
+                <Route path="/admin/dashboard" element={<DashboardOverviewPage />} />
                 <Route path="/admin/wb" element={<WBManagementPage />} />
+                <Route path="/admin/pengajar" element={<PengajarManagementPage />} />
+                <Route path="/admin/akademik" element={<AkademikPage />} />
+                <Route path="/admin/pendaftar" element={<PendaftarPage />} />
                 <Route path="/admin/konten" element={<BeritaManagementPage />} />
+                <Route path="/admin/presensi" element={<PresensiPage />} />
+                <Route path="/admin/keuangan" element={<KeuanganPage />} />
             </Route>
 
             {/* 4. RUTE UN-AUTHORIZED & FALLBACK */}
@@ -74,6 +97,27 @@ const AppRoutes = () => {
                     </div>
                 </div>
             } />
+
+            {/* AREA WARGA BELAJAR (WB) */}
+            <Route element={<ProtectedRoute allowedRoles={['wb']} />}>
+                <Route path="/wb" element={<WBLayout />}>
+                    <Route path="dashboard" element={<DashboardWB />} />
+                    <Route path="jadwal" element={<JadwalWB />} />
+                    <Route path="presensi" element={<PresensiWB />} />
+                    <Route path="riwayat-kehadiran" element={<RiwayatKehadiranWB />} />
+                    <Route path="informasi-studi" element={<InformasiStudiWB />} />
+                    <Route path="tagihan" element={<TagihanWB />} />
+                    <Route path="profil" element={<ProfilWB />} />
+                </Route>
+            </Route>
+            {/* AREA PENGAJAR */}
+            <Route element={<ProtectedRoute allowedRoles={['pengajar']} />}>
+                <Route path="/pengajar" element={<PengajarLayout />}>
+                    <Route path="dashboard" element={<DashboardPengajar />} />
+                    <Route path="jadwal" element={<JadwalPengajar />} />
+                    <Route path="profil" element={<ProfilPengajar />} />
+                </Route>
+            </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );
