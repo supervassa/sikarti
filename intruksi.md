@@ -348,11 +348,11 @@ Informasi last login minimal tersedia untuk:
 
 Contoh tampilan:
 
-| Nama | Role | Status | Last Login |
-|---|---|---|---|
-| Ahmad | WB | Aktif | 09 Agustus 2026 08:30 |
-| Budi | Pengajar | Aktif | 09 Agustus 2026 07:45 |
-| Admin 1 | Admin | Aktif | 08 Agustus 2026 20:10 |
+| Nama    | Role     | Status | Last Login            |
+| ------- | -------- | ------ | --------------------- |
+| Ahmad   | WB       | Aktif  | 09 Agustus 2026 08:30 |
+| Budi    | Pengajar | Aktif  | 09 Agustus 2026 07:45 |
+| Admin 1 | Admin    | Aktif  | 08 Agustus 2026 20:10 |
 
 Jika belum pernah login:
 

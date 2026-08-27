@@ -101,11 +101,11 @@ history through the terminal:
     local JSON to the Remote Config service:
 
   ```json
-    { "remoteconfig": { "template": "remote_config.json" } }
+  { "remoteconfig": { "template": "remote_config.json" } }
   ```
 
   - Deploy: Execute the partial deployment command
-    
+
     ```bash
     npx -y config-tools@latest deploy --only remoteconfig
     ```

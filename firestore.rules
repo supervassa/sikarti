@@ -46,7 +46,9 @@ service cloud.firestore {
     // Status WB 3-state: AKTIF, NONAKTIF (wajib catat terakhirAktif), LULUS (wajib catat tahunLulus).
     // Field tahun yang tidak relevan dengan status saat ini wajib TIDAK ADA (dibersihkan via deleteField()
     // di setWBLifecycleStatus) supaya data tidak basi saat status berpindah lagi.
-    function isValidWBProfile(data) {
+    // Bentuk dokumen WB dipisah dari cek waktu server supaya bisa dipakai ulang untuk create
+    // (createdAt/updatedAt harus baru) maupun edit (createdAt dikunci di pemanggil).
+    function isValidWBProfileShape(data) {
       return data.keys().hasAll(['nama', 'email', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
         && data.keys().hasOnly(['nama', 'email', 'paket', 'nik', 'noHp', 'tahunAngkatan', 'tahunLulus', 'terakhirAktif', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
         && data.nama is string && data.nama.size() > 1 && data.nama.size() <= 100
@@ -61,18 +63,49 @@ service cloud.firestore {
             : !('tahunLulus' in data.keys()))
         && (data.status == 'NONAKTIF'
             ? (data.terakhirAktif is string && data.terakhirAktif.size() > 0 && data.terakhirAktif.size() <= 20)
-            : !('terakhirAktif' in data.keys()))
-        && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt);
+            : !('terakhirAktif' in data.keys()));
     }
-    function isValidPengajarProfile(data) {
+    function isValidWBProfile(data) {
+      return isValidWBProfileShape(data) && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt);
+    }
+    function isValidPengajarProfileShape(data) {
       return data.keys().hasAll(['nama', 'email', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
         && data.keys().hasOnly(['nama', 'email', 'mapelDiampu', 'noHp', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
         && data.nama is string && data.nama.size() > 1 && data.nama.size() <= 100
         && data.email is string && data.email.size() > 4 && data.email.size() <= 254
         && data.role == 'pengajar' && data.kd_role == 33 && data.status is bool
         && (!('mapelDiampu' in data.keys()) || (data.mapelDiampu is string && data.mapelDiampu.size() <= 100))
-        && (!('noHp' in data.keys()) || (data.noHp is string && data.noHp.size() <= 30))
+        && (!('noHp' in data.keys()) || (data.noHp is string && data.noHp.size() <= 30));
+    }
+    function isValidPengajarProfile(data) {
+      return isValidPengajarProfileShape(data) && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt);
+    }
+    // Profil minimal calon WB (pra-aktivasi) yang ditulis sendiri saat submit formulir.
+    function isValidCalonWBProfile(data) {
+      return data.keys().hasOnly(['nama', 'email', 'role', 'kd_role', 'status', 'registrationId', 'createdAt', 'updatedAt'])
+        && data.keys().hasAll(['nama', 'email', 'role', 'kd_role', 'status', 'registrationId', 'createdAt', 'updatedAt'])
+        && data.nama is string && data.nama.size() > 1 && data.nama.size() <= 100
+        && data.email is string && data.email.size() > 4 && data.email.size() <= 254
+        && data.role == 'calon_wb' && data.kd_role == 21 && data.status == true
+        && data.registrationId == request.auth.uid
         && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt);
+    }
+    // Admin/superadmin mempromosikan calon_wb menjadi wb saat aktivasi (uid tetap sama).
+    function isValidCalonToWBActivation() {
+      return resource.data.role == 'calon_wb'
+        && request.resource.data.role == 'wb'
+        && request.resource.data.kd_role == 22
+        && request.resource.data.status == 'AKTIF'
+        && request.resource.data.createdAt == resource.data.createdAt
+        && isRecentServerTime(request.resource.data.updatedAt)
+        && request.resource.data.keys().hasOnly(['nama', 'email', 'paket', 'nik', 'noHp', 'tahunAngkatan', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['nama', 'email', 'paket', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
+        && request.resource.data.nama is string && request.resource.data.nama.size() > 1 && request.resource.data.nama.size() <= 100
+        && request.resource.data.email is string && request.resource.data.email.size() > 4
+        && request.resource.data.paket in ['Paket A', 'Paket B', 'Paket C']
+        && request.resource.data.tahunAngkatan is string && request.resource.data.tahunAngkatan.size() <= 20
+        && (!('nik' in request.resource.data.keys()) || request.resource.data.nik is string)
+        && (!('noHp' in request.resource.data.keys()) || request.resource.data.noHp is string);
     }
     // Admin/superadmin mengedit profil WB atau Pengajar (data diri + status aktif/nonaktif).
     // role/kd_role/createdAt dikunci agar tidak bisa diubah lewat jalur update biasa.
@@ -84,8 +117,8 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt
         && isRecentServerTime(request.resource.data.updatedAt)
         && (
-          (resource.data.role == 'wb' && isValidWBProfile(request.resource.data))
-          || (resource.data.role == 'pengajar' && isValidPengajarProfile(request.resource.data))
+          (resource.data.role == 'wb' && isValidWBProfileShape(request.resource.data))
+          || (resource.data.role == 'pengajar' && isValidPengajarProfileShape(request.resource.data))
         );
     }
     function isValidAdminDirectory(uid, data) {
@@ -101,7 +134,28 @@ service cloud.firestore {
     function isValidAdminStatusUpdate() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
         && request.resource.data.status is bool && isRecentServerTime(request.resource.data.updatedAt)
-        && resource.data.role == 'admin' && request.resource.data.role == 'admin';
+        && resource.data.role in ['admin', 'superadmin'] && request.resource.data.role == resource.data.role;
+    }
+    // Superadmin menaikkan admin -> superadmin atau menurunkan superadmin -> admin.
+    // Tidak boleh mengubah role akun sendiri, jadi selalu tersisa minimal satu superadmin.
+    function isValidAdminRoleChange(uid) {
+      return uid != request.auth.uid
+        && resource.data.role in ['admin', 'superadmin']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'kd_role', 'updatedAt'])
+        && request.resource.data.role in ['admin', 'superadmin']
+        && request.resource.data.role != resource.data.role
+        && (request.resource.data.role == 'superadmin'
+            ? request.resource.data.kd_role == 99
+            : request.resource.data.kd_role == 11)
+        && isRecentServerTime(request.resource.data.updatedAt);
+    }
+    function isValidAdminDirRoleChange(uid) {
+      return uid != request.auth.uid
+        && resource.data.role in ['admin', 'superadmin']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'updatedAt'])
+        && request.resource.data.role in ['admin', 'superadmin']
+        && request.resource.data.role != resource.data.role
+        && isRecentServerTime(request.resource.data.updatedAt);
     }
     function isValidLastLoginUpdate() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastLogin'])
@@ -124,13 +178,14 @@ service cloud.firestore {
         && data.performedByEmail is string && data.performedByEmail.size() <= 254
         && isRecentServerTime(data.timestamp) && data.metadata is map && data.metadata.size() <= 8;
     }
-    function isValidNewsDoc(data) {
+    // Bentuk dokumen berita dipisah dari cek waktu server supaya bisa dipakai ulang
+    // untuk create (createdAt baru) dan update (createdAt & author dikunci).
+    function isValidNewsShape(data) {
       return data.keys().hasOnly(['title', 'deskripsi', 'tipeMedia', 'mediaType', 'mediaUrl', 'mediaBase64', 'author', 'createdAt', 'updatedAt'])
         && data.keys().hasAll(['title', 'deskripsi', 'tipeMedia', 'author', 'createdAt', 'updatedAt'])
         && data.title is string && data.title.size() > 0 && data.title.size() <= 200
         && data.deskripsi is string && data.deskripsi.size() > 0 && data.deskripsi.size() <= 3000
         && data.author is string && data.author.size() <= 100
-        && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt)
         && data.tipeMedia in ['gambar', 'video']
         && (
           (data.tipeMedia == 'video'
@@ -146,6 +201,15 @@ service cloud.firestore {
                 && !('mediaUrl' in data.keys()))
             ))
         );
+    }
+    function isValidNewsDoc(data) {
+      return isValidNewsShape(data) && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt);
+    }
+    function isValidNewsUpdate() {
+      return isValidNewsShape(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.author == resource.data.author
+        && isRecentServerTime(request.resource.data.updatedAt);
     }
     // Bentuk dokumen mapel/jadwal dipisah dari cek createdAt/updatedAt supaya bisa dipakai ulang
     // baik untuk create (createdAt harus baru) maupun update (createdAt dikunci, updatedAt baru).
@@ -285,12 +349,89 @@ service cloud.firestore {
         && request.resource.data.status in ['LUNAS', 'BELUM_LUNAS']
         && isRecentServerTime(request.resource.data.updatedAt);
     }
-    function isValidPendaftarStatusUpdate() {
-      return isStaff()
-        && resource.data.status == 'PENDING'
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'verifiedBy', 'updatedAt'])
-        && request.resource.data.status in ['APPROVED', 'REJECTED']
-        && request.resource.data.verifiedBy == request.auth.uid
+    // --- PENDAFTARAN CALON WB (alur: bayar 48 jam → verifikasi → lengkapi profil → aktivasi) ---
+    function isValidRegDataDiri(data) {
+      return data.namaLengkap is string && data.namaLengkap.size() > 1 && data.namaLengkap.size() <= 100
+        && data.email is string && data.email.size() > 4 && data.email.size() <= 254
+        && data.noHp is string && data.noHp.size() > 0 && data.noHp.size() <= 30
+        && data.nik is string && data.nik.size() > 0 && data.nik.size() <= 30
+        && data.nisn is string && data.nisn.size() <= 30
+        && data.tempatLahir is string && data.tempatLahir.size() > 0 && data.tempatLahir.size() <= 100
+        && data.tanggalLahir is string && data.tanggalLahir.size() == 10
+        && data.jenisKelamin in ['L', 'P']
+        && data.alamat is string && data.alamat.size() > 0 && data.alamat.size() <= 500;
+    }
+    function isValidRegistrationCreate(data) {
+      return data.keys().hasOnly(['namaLengkap', 'email', 'noHp', 'nik', 'nisn', 'tempatLahir', 'tanggalLahir', 'jenisKelamin', 'alamat', 'status', 'deadlineAt', 'createdAt', 'updatedAt'])
+        && data.keys().hasAll(['namaLengkap', 'email', 'noHp', 'nik', 'nisn', 'tempatLahir', 'tanggalLahir', 'jenisKelamin', 'alamat', 'status', 'deadlineAt', 'createdAt', 'updatedAt'])
+        && isValidRegDataDiri(data)
+        && data.status == 'MENUNGGU_PEMBAYARAN'
+        && data.deadlineAt is timestamp && data.deadlineAt > request.time
+        && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt);
+    }
+    function regDiff() { return request.resource.data.diff(resource.data).affectedKeys(); }
+    // Calon unggah bukti bayar (masih dalam masa 48 jam) → status MENUNGGU_VERIFIKASI.
+    function isValidOwnPaymentUpload() {
+      return resource.data.status == 'MENUNGGU_PEMBAYARAN'
+        && request.time < resource.data.deadlineAt
+        && regDiff().hasOnly(['paymentProof', 'rejectionReason', 'status', 'updatedAt'])
+        && request.resource.data.status == 'MENUNGGU_VERIFIKASI'
+        && request.resource.data.paymentProof.base64 is string
+        && request.resource.data.paymentProof.base64.size() > 0
+        && request.resource.data.paymentProof.base64.size() <= 900000
+        && isRecentServerTime(request.resource.data.updatedAt);
+    }
+    // Calon melengkapi data lanjutan setelah pembayaran diverifikasi (status LUNAS).
+    function isValidOwnProfileCompletion() {
+      return resource.data.status == 'LUNAS'
+        && request.resource.data.status == 'LUNAS'
+        && regDiff().hasOnly(['namaLengkap', 'noHp', 'nik', 'nisn', 'tempatLahir', 'tanggalLahir', 'jenisKelamin', 'alamat', 'namaWali', 'noHpWali', 'program', 'dokumen', 'profileCompletedAt', 'updatedAt'])
+        && request.resource.data.namaWali is string && request.resource.data.namaWali.size() > 1 && request.resource.data.namaWali.size() <= 100
+        && request.resource.data.noHpWali is string && request.resource.data.noHpWali.size() > 0 && request.resource.data.noHpWali.size() <= 30
+        && request.resource.data.program in ['Paket A', 'Paket B', 'Paket C']
+        && request.resource.data.dokumen.pasFoto.base64 is string && request.resource.data.dokumen.pasFoto.base64.size() <= 900000
+        && request.resource.data.dokumen.dokumenPendukung.base64 is string && request.resource.data.dokumen.dokumenPendukung.base64.size() <= 900000
+        && isValidRegDataDiri(request.resource.data)
+        && isRecentServerTime(request.resource.data.updatedAt);
+    }
+    // Countdown habis tanpa bukti bayar → calon (atau AuthContext) menandai KEDALUWARSA.
+    function isValidOwnExpiry() {
+      return resource.data.status == 'MENUNGGU_PEMBAYARAN'
+        && request.time >= resource.data.deadlineAt
+        && regDiff().hasOnly(['status', 'updatedAt'])
+        && request.resource.data.status == 'KEDALUWARSA'
+        && isRecentServerTime(request.resource.data.updatedAt);
+    }
+    function isValidRegVerifyPayment() {
+      return resource.data.status == 'MENUNGGU_VERIFIKASI'
+        && regDiff().hasOnly(['status', 'paymentVerifiedBy', 'paymentVerifiedAt', 'updatedAt'])
+        && request.resource.data.status == 'LUNAS'
+        && request.resource.data.paymentVerifiedBy == request.auth.uid
+        && isRecentServerTime(request.resource.data.paymentVerifiedAt)
+        && isRecentServerTime(request.resource.data.updatedAt);
+    }
+    function isValidRegRejectPayment() {
+      return resource.data.status == 'MENUNGGU_VERIFIKASI'
+        && regDiff().hasOnly(['status', 'paymentProof', 'rejectionReason', 'updatedAt'])
+        && request.resource.data.status == 'MENUNGGU_PEMBAYARAN'
+        && !('paymentProof' in request.resource.data.keys())
+        && request.resource.data.rejectionReason is string && request.resource.data.rejectionReason.size() <= 300
+        && isRecentServerTime(request.resource.data.updatedAt);
+    }
+    function isValidRegReject() {
+      return resource.data.status in ['MENUNGGU_PEMBAYARAN', 'MENUNGGU_VERIFIKASI', 'LUNAS', 'KEDALUWARSA']
+        && regDiff().hasOnly(['status', 'rejectionReason', 'updatedAt'])
+        && request.resource.data.status == 'DITOLAK'
+        && request.resource.data.rejectionReason is string && request.resource.data.rejectionReason.size() <= 300
+        && isRecentServerTime(request.resource.data.updatedAt);
+    }
+    function isValidRegActivate() {
+      return resource.data.status == 'LUNAS'
+        && ('profileCompletedAt' in resource.data.keys())
+        && regDiff().hasOnly(['status', 'activatedBy', 'activatedAt', 'updatedAt'])
+        && request.resource.data.status == 'DIAKTIFKAN'
+        && request.resource.data.activatedBy == request.auth.uid
+        && isRecentServerTime(request.resource.data.activatedAt)
         && isRecentServerTime(request.resource.data.updatedAt);
     }
 
@@ -302,10 +443,13 @@ service cloud.firestore {
       allow get: if isOwner(uid) || isStaff() || (isPengajar() && resource.data.role == 'wb');
       allow list: if isStaff() || (isPengajar() && resource.data.role == 'wb');
       allow create: if (isSuperadmin() && isValidAdminProfile(request.resource.data))
-        || (isStaff() && (isValidWBProfile(request.resource.data) || isValidPengajarProfile(request.resource.data)));
+        || (isStaff() && (isValidWBProfile(request.resource.data) || isValidPengajarProfile(request.resource.data)))
+        || (isOwner(uid) && isValidCalonWBProfile(request.resource.data));
       allow update: if (isOwner(uid) && isValidLastLoginUpdate())
         || (isOwner(uid) && isValidSelfContactUpdate())
         || (isSuperadmin() && isValidAdminStatusUpdate())
+        || (isSuperadmin() && isValidAdminRoleChange(uid))
+        || (isStaff() && isValidCalonToWBActivation())
         || isValidWBOrPengajarEdit();
       // Hapus dokumen profil WB/Pengajar mencabut akses aplikasi (lihat AuthContext).
       // Akun Firebase Auth di baliknya perlu dibersihkan manual / lewat Admin SDK.
@@ -316,7 +460,8 @@ service cloud.firestore {
       allow get, list: if isSuperadmin();
       allow create: if isSuperadmin() && isValidAdminDirectory(uid, request.resource.data);
       allow update: if (isOwner(uid) && isValidLastLoginUpdate())
-        || (isSuperadmin() && isValidAdminStatusUpdate());
+        || (isSuperadmin() && isValidAdminStatusUpdate())
+        || (isSuperadmin() && isValidAdminDirRoleChange(uid));
       allow delete: if false;
     }
 
@@ -329,7 +474,8 @@ service cloud.firestore {
     match /news/{newsId} {
       allow get, list: if true;
       allow create: if isStaff() && isValidNewsDoc(request.resource.data);
-      allow update, delete: if false;
+      allow update: if isStaff() && isValidNewsUpdate();
+      allow delete: if isStaff();
     }
 
     // Mapel & jadwal bukan data sensitif — semua pengguna yang login (WB/Pengajar/Staff) boleh baca.
@@ -377,13 +523,29 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Formulir pendaftaran publik (RegistrationPage) belum menulis ke Firestore
-    // (masih TODO di kode). Baca & verifikasi status sudah disiapkan; rule "create"
-    // publik ditambahkan begitu formulir itu benar-benar dihubungkan ke Firestore.
+    // Pendaftaran calon WB: dokumen di-key oleh Auth UID calon. Calon menulis sendiri
+    // saat submit formulir & saat unggah bukti / lengkapi profil; staff yang memverifikasi
+    // pembayaran, menolak, dan mengaktifkan (users/{uid} calon_wb -> wb).
     match /registrations/{regId} {
-      allow get, list: if isStaff();
-      allow update: if isValidPendaftarStatusUpdate();
-      allow create, delete: if false;
+      allow get: if isOwner(regId) || isStaff();
+      allow list: if isStaff();
+      allow create: if isOwner(regId) && isValidRegistrationCreate(request.resource.data);
+      allow update: if (isOwner(regId) && (isValidOwnPaymentUpload() || isValidOwnProfileCompletion() || isValidOwnExpiry()))
+        || (isStaff() && (isValidRegVerifyPayment() || isValidRegRejectPayment() || isValidRegReject() || isValidRegActivate()));
+      allow delete: if false;
+    }
+
+    // Antrean email untuk Firebase "Trigger Email from Firestore" extension.
+    // Hanya staff yang boleh menulis; tidak ada yang boleh membaca dari client.
+    match /mail/{mailId} {
+      allow get, list: if false;
+      allow create: if isStaff()
+        && request.resource.data.keys().hasOnly(['to', 'message'])
+        && request.resource.data.to is string && request.resource.data.to.size() > 4 && request.resource.data.to.size() <= 254
+        && request.resource.data.message.keys().hasOnly(['subject', 'html'])
+        && request.resource.data.message.subject is string && request.resource.data.message.subject.size() <= 200
+        && request.resource.data.message.html is string && request.resource.data.message.html.size() <= 20000;
+      allow update, delete: if false;
     }
 
     match /{document=**} { allow read, write: if false; }

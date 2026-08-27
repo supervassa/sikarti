@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-<!--    <link rel="icon" type="image/svg+xml" href="/icons-pkbm.svg" />-->
+    <!--    <link rel="icon" type="image/svg+xml" href="/icons-pkbm.svg" />-->
     <link rel="icon" type="image/png" href="/icons.png" />
     <link rel="apple-touch-icon" href="/pwa-192x192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -13,9 +13,12 @@
     <title>pkbm-kartini</title>
     <script>
       (function () {
-        var theme = localStorage.getItem('pkbm-theme') || 'system';
-        var isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        document.documentElement.classList.toggle('dark', isDark);
+        var theme = localStorage.getItem("pkbm-theme") || "system";
+        var isDark =
+          theme === "dark" ||
+          (theme === "system" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", isDark);
       })();
     </script>
   </head>

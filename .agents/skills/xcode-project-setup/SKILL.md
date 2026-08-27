@@ -60,7 +60,7 @@ still verify it is present in the build settings if you encounter issues.
 - Failing to include this flag when adding Firebase dependencies is a critical
   error.
 
-______________________________________________________________________
+---
 
 ## Empty Directory Workflow
 
@@ -74,7 +74,7 @@ project manually and let me know when you are ready to proceed."**
 Wait for the user to confirm they have created the `.xcodeproj` via Xcode, then
 proceed with the Standard Xcode Workflow below.
 
-______________________________________________________________________
+---
 
 ## Standard Xcode Workflow
 
@@ -130,13 +130,13 @@ swift run --package-path /Users/foo/.agents/skills/xcode-project-setup/scripts/x
 ### Example 2: Firebase (Requires Plist)
 
 Adding Firebase and linking the `GoogleService-Info.plist` to the resources
-build phase automatically. *Note: Replace `11.0.0` with the actual latest
+build phase automatically. _Note: Replace `11.0.0` with the actual latest
 version from
-[the releases page](https://github.com/firebase/firebase-ios-sdk/releases).*
+[the releases page](https://github.com/firebase/firebase-ios-sdk/releases)._
 
 ```bash
 swift run --package-path /Users/foo/.agents/skills/xcode-project-setup/scripts/xcode_spm_setup xcode_spm_setup MyApp.xcodeproj https://github.com/firebase/firebase-ios-sdk 11.0.0 --plist MyApp/GoogleService-Info.plist FirebaseCore FirebaseAuth FirebaseFirestore
 ```
 
-*Note: The script is idempotent. It will automatically skip linking files or
-packages that are already present in the project.*
+_Note: The script is idempotent. It will automatically skip linking files or
+packages that are already present in the project._

@@ -25,19 +25,19 @@
 
 ## Devil's-advocate checks
 
-| Attempt | Expected result | Rule outcome |
-| --- | --- | --- |
-| Anonymous collection query of `users` | Denied | `list` is denied. |
-| User A reads User B's user document | Denied | UID must match document ID. |
-| User A changes role, `kd_role`, status, or email | Denied | Only `lastLogin` may change. |
-| User A adds arbitrary fields or a 1 MB value | Denied | Any changed field besides `lastLogin` fails validation. |
-| User A replaces `lastLogin` with a string or custom time | Denied | It must be a timestamp equal to `request.time`. |
-| User A creates a privileged profile | Denied | Client creates are denied. |
-| User A deletes a profile | Denied | Client deletes are denied. |
-| Guest reads `konten` | Allowed by existing guest-content requirement | Public read is explicitly limited to `konten`. |
-| Guest writes `konten` | Denied | All client writes are denied. |
-| Access to an unknown collection/subcollection | Denied | Default-deny catch-all applies. |
-| Admin lists private `users` | Denied | `users` collection queries are denied. |
-| Admin promotes itself to superadmin | Denied | Profile create/update only permits role `admin`. |
-| Admin changes another admin status | Denied | Only `isSuperadmin()` can perform that update. |
-| Any user rewrites an audit entry | Denied | Audit logs permit create only; update/delete are denied. |
+| Attempt                                                  | Expected result                               | Rule outcome                                             |
+| -------------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------- |
+| Anonymous collection query of `users`                    | Denied                                        | `list` is denied.                                        |
+| User A reads User B's user document                      | Denied                                        | UID must match document ID.                              |
+| User A changes role, `kd_role`, status, or email         | Denied                                        | Only `lastLogin` may change.                             |
+| User A adds arbitrary fields or a 1 MB value             | Denied                                        | Any changed field besides `lastLogin` fails validation.  |
+| User A replaces `lastLogin` with a string or custom time | Denied                                        | It must be a timestamp equal to `request.time`.          |
+| User A creates a privileged profile                      | Denied                                        | Client creates are denied.                               |
+| User A deletes a profile                                 | Denied                                        | Client deletes are denied.                               |
+| Guest reads `konten`                                     | Allowed by existing guest-content requirement | Public read is explicitly limited to `konten`.           |
+| Guest writes `konten`                                    | Denied                                        | All client writes are denied.                            |
+| Access to an unknown collection/subcollection            | Denied                                        | Default-deny catch-all applies.                          |
+| Admin lists private `users`                              | Denied                                        | `users` collection queries are denied.                   |
+| Admin promotes itself to superadmin                      | Denied                                        | Profile create/update only permits role `admin`.         |
+| Admin changes another admin status                       | Denied                                        | Only `isSuperadmin()` can perform that update.           |
+| Any user rewrites an audit entry                         | Denied                                        | Audit logs permit create only; update/delete are denied. |

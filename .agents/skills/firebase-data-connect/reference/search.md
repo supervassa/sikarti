@@ -11,7 +11,7 @@ SQL Connect. SQL Connect supports three types of search:
 1. **String Pattern Filters (Exact/Regex)**: Best for simple prefix, exact
    match, or basic wildcard queries (uses standard Postgres indexing).
 
-______________________________________________________________________
+---
 
 ## Search Selection Guide
 
@@ -26,7 +26,7 @@ task:
 | **Column Support**   | Single column per query.                            | Multiple columns combined.                     | Multiple columns via standard logical filters (`_or`). |
 | **Overhead**         | High (API execution costs & vector column storage). | Medium (generates indices & tsvector columns). | Low (uses standard index / minimal storage).           |
 
-______________________________________________________________________
+---
 
 ## 1. Vector Similarity Search (Semantic)
 
@@ -65,15 +65,18 @@ store embeddings on creation.
 
 ```graphql
 # connector/mutations.gql
-mutation CreateMovieWithEmbedding($title: String!, $description: String!) @auth(level: USER) {
-  movie_insert(data: {
-    title: $title,
-    description: $description,
-    descriptionEmbedding_embed: {
-      model: "textembedding-gecko@003",
-      text: $description
+mutation CreateMovieWithEmbedding($title: String!, $description: String!)
+@auth(level: USER) {
+  movie_insert(
+    data: {
+      title: $title
+      description: $description
+      descriptionEmbedding_embed: {
+        model: "textembedding-gecko@003"
+        text: $description
+      }
     }
-  })
+  )
 }
 ```
 
@@ -81,13 +84,14 @@ mutation CreateMovieWithEmbedding($title: String!, $description: String!) @auth(
 
 ```graphql
 # connector/mutations.gql
-mutation UpdateMovieDescription($id: UUID!, $description: String!) @auth(level: USER) {
+mutation UpdateMovieDescription($id: UUID!, $description: String!)
+@auth(level: USER) {
   movie_update(
-    id: $id,
+    id: $id
     data: {
-      description: $description,
+      description: $description
       descriptionEmbedding_embed: {
-        model: "textembedding-gecko@003",
+        model: "textembedding-gecko@003"
         text: $description
       }
     }
@@ -109,7 +113,7 @@ embedding on the fly using Vertex AI.
 # connector/queries.gql
 query SearchMoviesByDescription($query: String!) @auth(level: PUBLIC) {
   movies_descriptionEmbedding_similarity(
-    compare_embed: { model: "textembedding-gecko@003", text: $query },
+    compare_embed: { model: "textembedding-gecko@003", text: $query }
     limit: 5
   ) {
     id
@@ -126,10 +130,11 @@ directly to the search without calling Vertex AI.
 
 ```graphql
 # connector/queries.gql
-query SearchMoviesByCustomVector($vector: Vector!, $limit: Int!) @auth(level: PUBLIC) {
+query SearchMoviesByCustomVector($vector: Vector!, $limit: Int!)
+@auth(level: PUBLIC) {
   movies_descriptionEmbedding_similarity(
-    compare: $vector,
-    method: L2,
+    compare: $vector
+    method: L2
     limit: $limit
   ) {
     id
@@ -151,19 +156,21 @@ query SearchMoviesByCustomVector($vector: Vector!, $limit: Int!) @auth(level: PU
 # connector/queries.gql
 query SearchMoviesCosineSimilarity($query: String!) @auth(level: PUBLIC) {
   movies_descriptionEmbedding_similarity(
-    compare_embed: { model: "textembedding-gecko@003", text: $query },
-    method: COSINE,
-    within: 0.5, # Maximum distance threshold
+    compare_embed: { model: "textembedding-gecko@003", text: $query }
+    method: COSINE
+    within: 0.5 # Maximum distance threshold
     limit: 5
   ) {
     id
     title
-    _metadata { distance }
+    _metadata {
+      distance
+    }
   }
 }
 ```
 
-______________________________________________________________________
+---
 
 ## 2. Full-Text Search (Lexical)
 
@@ -192,7 +199,7 @@ type Movie @table {
   PostgreSQL requires matching text search configurations for multi-column
   queries.
 
-______________________________________________________________________
+---
 
 ### Full-Text Search Queries
 
@@ -211,7 +218,7 @@ query SearchMoviesLexical($query: String!) @auth(level: PUBLIC) {
 }
 ```
 
-______________________________________________________________________
+---
 
 ### Tuning Full-Text Queries
 
@@ -248,10 +255,11 @@ Results default to sorting by descending relevance rank. Select
 
 ```graphql
 # connector/queries.gql
-query SearchMoviesHighRelevance($query: String!, $threshold: Float!) @auth(level: PUBLIC) {
+query SearchMoviesHighRelevance($query: String!, $threshold: Float!)
+@auth(level: PUBLIC) {
   movies_search(
-    query: $query,
-    relevanceThreshold: $threshold, # E.g., 0.05
+    query: $query
+    relevanceThreshold: $threshold # E.g., 0.05
     limit: 5
   ) {
     id

@@ -97,11 +97,7 @@ Controls trailing slashes in static content URLs.
 {
   "hosting": {
     "public": "dist",
-    "ignore": [
-      "config.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
+    "ignore": ["config.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
         "source": "**",

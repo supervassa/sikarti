@@ -39,7 +39,7 @@ to upgrade their plan.
 This is the recommended flow for most users.
 
 1. Configure `firebase.json` with an `apphosting` block.
-   
+
    ```json
    {
      "apphosting": {
@@ -55,6 +55,7 @@ This is the recommended flow for most users.
      }
    }
    ```
+
 1. Create or edit `apphosting.yaml`- see
    [Configuration](references/configuration.md) for more information on how to
    do so.

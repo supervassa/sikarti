@@ -41,7 +41,7 @@ Once the location is determined, create the database:
 
 Proceed with using the guides under `references/enterprise/`.
 
-______________________________________________________________________
+---
 
 ## 2. Specialized Guides
 
