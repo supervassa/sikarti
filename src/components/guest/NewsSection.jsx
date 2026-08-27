@@ -4,7 +4,7 @@ import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestor
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faVideo } from '@fortawesome/free-solid-svg-icons';
 import { db } from '../../config/firebase';
-import { getNewsImageSrc, formatNewsDate } from '../../utils/newsMedia';
+import { getNewsThumbnail, formatNewsDate } from '../../utils/newsMedia';
 
 const NewsSection = () => {
     const [newsList, setNewsList] = useState([]);
@@ -34,14 +34,21 @@ const NewsSection = () => {
                             <p className="text-sm text-gray-400">Belum ada berita.</p>
                         ) : (
                             newsList.map((item) => {
-                                const imageSrc = getNewsImageSrc(item);
+                                const imageSrc = getNewsThumbnail(item);
                                 return (
                                     <Link key={item.id} to={`/berita/${item.id}`} className="flex bg-white dark:bg-slate-800 rounded-lg shadow-sm overflow-hidden border border-gray-100 dark:border-slate-700 hover:shadow-md transition-shadow">
-                                        <div className="w-1/3 bg-gray-200 dark:bg-slate-700 min-h-[120px] flex-shrink-0 flex items-center justify-center overflow-hidden">
+                                        <div className="relative w-1/3 bg-gray-200 dark:bg-slate-700 min-h-[120px] flex-shrink-0 flex items-center justify-center overflow-hidden">
                                             {imageSrc ? (
                                                 <img src={imageSrc} alt={item.title} className="w-full h-full object-cover" />
                                             ) : (
                                                 <FontAwesomeIcon icon={faVideo} className="text-gray-400 w-6 h-6" />
+                                            )}
+                                            {imageSrc && item.tipeMedia === 'video' && (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                                    <div className="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center">
+                                                        <div className="w-0 h-0 border-y-[6px] border-y-transparent border-l-[9px] border-l-white ml-1" />
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
                                         <div className="p-4 w-2/3 flex flex-col justify-center">

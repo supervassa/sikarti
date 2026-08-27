@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import { getNewsImageSrc, formatNewsDate } from '../../utils/newsMedia';
+import { getNewsImageSrc, formatNewsDate, getYoutubeEmbedUrl } from '../../utils/newsMedia';
 import Navbar from '../../components/guest/Navbar';
 import Footer from '../../components/guest/Footer';
 
@@ -23,6 +23,7 @@ const NewsDetail = () => {
     }, [id]);
 
     const imageSrc = news ? getNewsImageSrc(news) : null;
+    const youtubeEmbedUrl = news?.tipeMedia === 'video' ? getYoutubeEmbedUrl(news.mediaUrl) : null;
 
     return (
         <div className="font-sans text-gray-800 dark:text-slate-100 bg-white dark:bg-slate-950 min-h-screen flex flex-col transition-colors">
@@ -64,7 +65,17 @@ const NewsDetail = () => {
                             {/* Media Artikel */}
                             {news.tipeMedia === 'video' ? (
                                 <div className="w-full aspect-video bg-black rounded-2xl mb-10 overflow-hidden">
-                                    <video controls src={news.mediaUrl} className="w-full h-full" />
+                                    {youtubeEmbedUrl ? (
+                                        <iframe
+                                            src={youtubeEmbedUrl}
+                                            title={news.title}
+                                            className="w-full h-full"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allowFullScreen
+                                        />
+                                    ) : (
+                                        <video controls src={news.mediaUrl} className="w-full h-full" />
+                                    )}
                                 </div>
                             ) : imageSrc ? (
                                 <img src={imageSrc} alt={news.title} className="w-full max-h-[480px] object-cover rounded-2xl mb-10" />

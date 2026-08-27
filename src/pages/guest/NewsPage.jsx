@@ -4,7 +4,7 @@ import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faVideo } from '@fortawesome/free-solid-svg-icons';
 import { db } from '../../config/firebase';
-import { getNewsImageSrc, formatNewsDate } from '../../utils/newsMedia';
+import { getNewsThumbnail, formatNewsDate } from '../../utils/newsMedia';
 import Navbar from '../../components/guest/Navbar';
 import Footer from '../../components/guest/Footer';
 
@@ -42,16 +42,23 @@ const NewsPage = () => {
                         <p className="text-center text-gray-400">Belum ada berita.</p>
                     ) : (
                         newsList.map((news) => {
-                            const imageSrc = getNewsImageSrc(news);
+                            const imageSrc = getNewsThumbnail(news);
                             return (
                                 <Link key={news.id} to={`/berita/${news.id}`} className="block group">
                                     <div className="flex flex-col md:flex-row bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden border border-gray-100 dark:border-slate-700 transition-all hover:shadow-md hover:border-red-200 dark:hover:border-red-500/30">
                                         {/* Thumbnail */}
-                                        <div className="md:w-1/3 bg-gray-200 dark:bg-slate-700 min-h-[200px] flex-shrink-0 flex items-center justify-center overflow-hidden">
+                                        <div className="relative md:w-1/3 bg-gray-200 dark:bg-slate-700 min-h-[200px] flex-shrink-0 flex items-center justify-center overflow-hidden">
                                             {imageSrc ? (
                                                 <img src={imageSrc} alt={news.title} className="w-full h-full object-cover" />
                                             ) : (
                                                 <FontAwesomeIcon icon={faVideo} className="text-gray-400 w-8 h-8" />
+                                            )}
+                                            {imageSrc && news.tipeMedia === 'video' && (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                                    <div className="w-10 h-10 rounded-full bg-black/60 flex items-center justify-center">
+                                                        <div className="w-0 h-0 border-y-[7px] border-y-transparent border-l-[11px] border-l-white ml-1" />
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
 

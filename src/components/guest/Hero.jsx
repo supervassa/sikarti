@@ -11,7 +11,7 @@ const Hero = () => {
                 {/* Kolom Kiri: Teks */}
                 <div className="md:w-1/2 md:pr-12">
                     <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white leading-tight mb-4">
-                        Pendidikan <span className="text-red-600 dark:text-red-400">Berdaulat.</span>
+                        {/*Pendidikan <span className="text-red-600 dark:text-red-400">Berdaulat.</span>*/}
                     </h1>
                     <p className="text-lg text-gray-600 dark:text-slate-300 mb-8 max-w-lg">
                         Pusat Kegiatan Belajar Masyarakat (PKBM) KARTINI hadir untuk memberikan layanan pendidikan non-formal yang berkualitas, inklusif, dan berorientasi pada kemandirian warga belajar.
