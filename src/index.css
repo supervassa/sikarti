@@ -32,3 +32,25 @@
 .pkbm-time-clock.react-clock {
   z-index: 60;
 }
+
+/* Cetak Kartu Kredensial WB: sembunyikan seluruh halaman kecuali kartunya. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #kartu-kredensial-wb,
+  #kartu-kredensial-wb * {
+    visibility: visible;
+  }
+  #kartu-kredensial-wb {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    width: 320px;
+    height: max-content;
+    box-shadow: none !important;
+  }
+  #kartu-kredensial-wb .kredensial-actions {
+    display: none !important;
+  }
+}

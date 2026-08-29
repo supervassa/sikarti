@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { to: "/", label: "Beranda" },
   { to: "/profil", label: "Profil" },
   { to: "/berita", label: "Berita" },
+  { to: "/kontak", label: "Kontak" },
 ];
 
 const DASHBOARD_PATH_BY_ROLE = {

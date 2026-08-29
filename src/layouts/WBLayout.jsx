@@ -145,7 +145,9 @@ const WBLayout = () => {
                     {displayName}
                   </p>
                   <p className="text-xs text-slate-400 truncate">
-                    {currentUser?.email}
+                    {currentUser?.nomorInduk
+                      ? `No. Induk ${currentUser.nomorInduk}`
+                      : currentUser?.email}
                   </p>
                 </div>
               </div>

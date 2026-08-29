@@ -15,6 +15,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { auth, db } from "../config/firebase.js"; // Pastikan path ke file firebase.js Anda benar
+import { buildWbLoginEmail } from "../utils/wbLogin.js";
 
 const AuthContext = createContext();
 
@@ -193,6 +194,16 @@ export const AuthProvider = ({ children }) => {
     return result;
   };
 
+  // Login Warga Belajar: Nomor Induk (angka) dipetakan ke synthetic email di balik layar.
+  const loginWithNomorInduk = async (nomorInduk, password) => {
+    const result = await signInWithEmailAndPassword(
+      auth,
+      buildWbLoginEmail(nomorInduk),
+      password,
+    );
+    return result;
+  };
+
   const logout = async () => {
     await signOut(auth);
   };
@@ -207,6 +218,7 @@ export const AuthProvider = ({ children }) => {
     clearAuthError: () => setAuthError(""),
     loginWithGoogle,
     loginWithEmail,
+    loginWithNomorInduk,
     logout,
   };
 

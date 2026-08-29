@@ -50,10 +50,14 @@ service cloud.firestore {
     // (createdAt/updatedAt harus baru) maupun edit (createdAt dikunci di pemanggil).
     function isValidWBProfileShape(data) {
       return data.keys().hasAll(['nama', 'email', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
-        && data.keys().hasOnly(['nama', 'email', 'paket', 'nik', 'noHp', 'tahunAngkatan', 'tahunLulus', 'terakhirAktif', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['nama', 'email', 'emailKontak', 'nomorInduk', 'paket', 'nik', 'noHp', 'tahunAngkatan', 'tahunLulus', 'terakhirAktif', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
         && data.nama is string && data.nama.size() > 1 && data.nama.size() <= 100
         && data.email is string && data.email.size() > 4 && data.email.size() <= 254
         && data.role == 'wb' && data.kd_role == 22 && data.status in ['AKTIF', 'NONAKTIF', 'LULUS']
+        // Nomor Induk = kredensial login WB (dipetakan ke synthetic email di client). Opsional di
+        // shape supaya edit WB lama (belum punya) tidak pecah; kehadirannya diwajibkan di allow create.
+        && (!('nomorInduk' in data.keys()) || (data.nomorInduk is string && data.nomorInduk.size() >= 6 && data.nomorInduk.size() <= 20))
+        && (!('emailKontak' in data.keys()) || (data.emailKontak is string && data.emailKontak.size() <= 254))
         && (!('paket' in data.keys()) || data.paket in ['Paket A', 'Paket B', 'Paket C'])
         && (!('tahunAngkatan' in data.keys()) || (data.tahunAngkatan is string && data.tahunAngkatan.size() <= 20))
         && (!('nik' in data.keys()) || (data.nik is string && data.nik.size() <= 30))
@@ -443,7 +447,10 @@ service cloud.firestore {
       allow get: if isOwner(uid) || isStaff() || (isPengajar() && resource.data.role == 'wb');
       allow list: if isStaff() || (isPengajar() && resource.data.role == 'wb');
       allow create: if (isSuperadmin() && isValidAdminProfile(request.resource.data))
-        || (isStaff() && (isValidWBProfile(request.resource.data) || isValidPengajarProfile(request.resource.data)))
+        || (isStaff() && (
+              (isValidWBProfile(request.resource.data) && 'nomorInduk' in request.resource.data.keys())
+              || isValidPengajarProfile(request.resource.data)
+           ))
         || (isOwner(uid) && isValidCalonWBProfile(request.resource.data));
       allow update: if (isOwner(uid) && isValidLastLoginUpdate())
         || (isOwner(uid) && isValidSelfContactUpdate())
@@ -454,6 +461,20 @@ service cloud.firestore {
       // Hapus dokumen profil WB/Pengajar mencabut akses aplikasi (lihat AuthContext).
       // Akun Firebase Auth di baliknya perlu dibersihkan manual / lewat Admin SDK.
       allow delete: if isStaff() && resource.data.role in ['wb', 'pengajar'];
+    }
+
+    // wbSecrets/{uid}: password login WB yang di-generate admin, disimpan supaya admin bisa
+    // membacakannya kembali (WB lupa) & melakukan reset (re-auth sebagai WB di app sekunder
+    // lalu updatePassword). HANYA staff yang boleh baca/tulis — WB tidak boleh baca miliknya.
+    match /wbSecrets/{uid} {
+      allow read: if isStaff();
+      allow create, update: if isStaff()
+        && request.resource.data.keys().hasOnly(['pwd', 'nomorInduk', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['pwd', 'nomorInduk', 'updatedAt'])
+        && request.resource.data.pwd is string && request.resource.data.pwd.size() >= 6 && request.resource.data.pwd.size() <= 64
+        && request.resource.data.nomorInduk is string && request.resource.data.nomorInduk.size() >= 6 && request.resource.data.nomorInduk.size() <= 20
+        && isRecentServerTime(request.resource.data.updatedAt);
+      allow delete: if isStaff();
     }
 
     match /admins/{uid} {

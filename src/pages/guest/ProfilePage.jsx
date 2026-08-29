@@ -1,6 +1,7 @@
 import React from "react";
 import Navbar from "../../components/guest/Navbar";
 import Footer from "../../components/guest/Footer";
+import { CONTACT_INFO } from "../../config/contactInfo";
 
 const ProfilePage = () => {
   return (
@@ -179,19 +180,35 @@ const ProfilePage = () => {
                 <p>
                   <strong className="text-white">Alamat:</strong>
                   <br />
-                  Jl. Pendidikan No. 123, Kota, Indonesia
+                  {CONTACT_INFO.addressLines.map((line) => (
+                    <span key={line} className="block">
+                      {line}
+                    </span>
+                  ))}
                 </p>
-                <p>
-                  <strong className="text-white">Telepon:</strong>
-                  <br />
-                  +62 812 3456 7890
-                </p>
-                <p>
-                  <strong className="text-white">Email:</strong>
-                  <br />
-                  info@pkbmkartini.ac.id
-                </p>
+                {CONTACT_INFO.phone && (
+                  <p>
+                    <strong className="text-white">Telepon:</strong>
+                    <br />
+                    {CONTACT_INFO.phone}
+                  </p>
+                )}
+                {CONTACT_INFO.email && (
+                  <p>
+                    <strong className="text-white">Email:</strong>
+                    <br />
+                    {CONTACT_INFO.email}
+                  </p>
+                )}
               </div>
+              <a
+                href={CONTACT_INFO.googleMapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-block text-sm font-semibold text-red-400 hover:text-red-300"
+              >
+                Lihat di Google Maps &rarr;
+              </a>
             </div>
           </div>
         </div>

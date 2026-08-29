@@ -1,6 +1,4 @@
 import React, { useState } from "react";
-import { sendPasswordResetEmail } from "firebase/auth";
-import { auth } from "../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
 import { updateOwnContact } from "../../services/wbServices";
 
@@ -9,7 +7,6 @@ const ProfilWB = () => {
   const [noHp, setNoHp] = useState(currentUser?.noHp || "");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const [resetSent, setResetSent] = useState(false);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -22,16 +19,6 @@ const ProfilWB = () => {
       setMessage("Gagal memperbarui: " + err.message);
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleResetPassword = async () => {
-    try {
-      await sendPasswordResetEmail(auth, currentUser.email);
-    } catch {
-      // pesan generik dijaga sama walau gagal, jangan bocorin status akun
-    } finally {
-      setResetSent(true);
     }
   };
 
@@ -55,9 +42,9 @@ const ProfilWB = () => {
             </p>
           </div>
           <div>
-            <p className="text-xs text-slate-400">Email</p>
-            <p className="font-semibold text-slate-800 dark:text-slate-100 mt-0.5">
-              {currentUser?.email}
+            <p className="text-xs text-slate-400">Nomor Induk</p>
+            <p className="font-semibold text-slate-800 dark:text-slate-100 mt-0.5 font-mono">
+              {currentUser?.nomorInduk || "-"}
             </p>
           </div>
           <div>
@@ -106,24 +93,14 @@ const ProfilWB = () => {
         </form>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 flex items-center justify-between gap-4">
-        <div>
-          <p className="font-semibold text-slate-800 dark:text-slate-100">
-            Ganti Password
-          </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {resetSent
-              ? "Tautan reset password sudah dikirim ke email Anda."
-              : "Kami akan kirim tautan reset password ke email Anda."}
-          </p>
-        </div>
-        <button
-          onClick={handleResetPassword}
-          disabled={resetSent}
-          className="px-4 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-60 shrink-0"
-        >
-          {resetSent ? "Terkirim" : "Kirim Email Reset"}
-        </button>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+        <p className="font-semibold text-slate-800 dark:text-slate-100">
+          Ganti Password
+        </p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          Untuk mengganti atau mengatur ulang password, hubungi admin PKBM
+          KARTINI. Admin dapat membuatkan password baru untuk Anda.
+        </p>
       </div>
     </section>
   );

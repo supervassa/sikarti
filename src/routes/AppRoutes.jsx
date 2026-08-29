@@ -11,6 +11,7 @@ import ProtectedRoute from "./ProtectedRoute";
 // Pages - Guest & Auth
 import LandingPage from "../pages/guest/LandingPage";
 import ProfilePage from "../pages/guest/ProfilePage";
+import ContactPage from "../pages/guest/ContactPage";
 import NewsPage from "../pages/guest/NewsPage";
 import NewsDetail from "../pages/guest/NewsDetail";
 import RegistrationPage from "../pages/guest/RegistrationPage";
@@ -24,7 +25,8 @@ import AdminManagementPage from "../pages/superadmin/AdminManagementPage";
 import DashboardOverviewPage from "../pages/admin/DashboardOverviewPage";
 import WBManagementPage from "../pages/admin/WBManagementPage";
 import PengajarManagementPage from "../pages/admin/PengajarManagementPage";
-import AkademikPage from "../pages/admin/AkademikPage";
+import MapelPage from "../pages/admin/MapelPage";
+import JadwalPage from "../pages/admin/JadwalPage";
 import PendaftarPage from "../pages/admin/PendaftarPage";
 import BeritaManagementPage from "../pages/admin/BeritaManagementPage";
 import PresensiPage from "../pages/admin/PresensiPage";
@@ -52,6 +54,7 @@ const AppRoutes = () => {
       <Route element={<GuestLayout />}>
         <Route path="/" element={<LandingPage />} />
         <Route path="/profil" element={<ProfilePage />} />
+        <Route path="/kontak" element={<ContactPage />} />
         <Route path="/berita" element={<NewsPage />} />
         <Route path="/berita/:id" element={<NewsDetail />} />
         <Route path="/daftar" element={<RegistrationPage />} />
@@ -81,7 +84,12 @@ const AppRoutes = () => {
         <Route path="/admin/dashboard" element={<DashboardOverviewPage />} />
         <Route path="/admin/wb" element={<WBManagementPage />} />
         <Route path="/admin/pengajar" element={<PengajarManagementPage />} />
-        <Route path="/admin/akademik" element={<AkademikPage />} />
+        <Route path="/admin/mapel" element={<MapelPage />} />
+        <Route path="/admin/jadwal" element={<JadwalPage />} />
+        <Route
+          path="/admin/akademik"
+          element={<Navigate to="/admin/mapel" replace />}
+        />
         <Route path="/admin/pendaftar" element={<PendaftarPage />} />
         <Route path="/admin/konten" element={<BeritaManagementPage />} />
         <Route path="/admin/presensi" element={<PresensiPage />} />

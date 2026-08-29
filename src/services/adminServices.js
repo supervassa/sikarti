@@ -3,6 +3,7 @@ import {
   collection,
   doc,
   addDoc,
+  getDoc,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -12,9 +13,12 @@ import {
 import {
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  signInWithEmailAndPassword,
   signOut,
+  updatePassword,
 } from "firebase/auth";
 import { getSecondaryAuth } from "./adminManagement.js";
+import { buildWbLoginEmail, generateWbPassword } from "../utils/wbLogin.js";
 
 const CURRENT_TAHUN_AJARAN = (() => {
   const y = new Date().getFullYear();
@@ -34,7 +38,10 @@ export const queueEmail = async ({ to, subject, html }) => {
 // Password sementara acak; akun sesungguhnya diaktifkan lewat email set-password.
 const generateTempPassword = () => `Tmp-${crypto.randomUUID()}`;
 
-// Buat akun Firebase Auth + dokumen users/{uid}, lalu kirim email set-password.
+// Buat akun Firebase Auth + dokumen users/{uid}.
+// - Default: password acak sekali pakai + kirim email set-password (dipakai Pengajar).
+// - Jika `password` diberikan: dipakai apa adanya. Jika `sendResetEmail` false: email dilewati
+//   (dipakai WB — kredensialnya dicetak admin, bukan lewat email).
 const createAuthAccount = async ({
   nama,
   email,
@@ -42,26 +49,31 @@ const createAuthAccount = async ({
   role,
   status = true,
   extra = {},
+  password,
+  sendResetEmail = true,
 }) => {
   const secondaryAuth = getSecondaryAuth();
+  const cleanEmail = email.trim().toLowerCase();
   try {
     const credential = await createUserWithEmailAndPassword(
       secondaryAuth,
-      email.trim().toLowerCase(),
-      generateTempPassword(),
+      cleanEmail,
+      password || generateTempPassword(),
     );
     const uid = credential.user.uid;
     await setDoc(doc(db, "users", uid), {
       ...extra,
       nama,
-      email: email.trim().toLowerCase(),
+      email: cleanEmail,
       role,
       kd_role,
       status,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
-    await sendPasswordResetEmail(secondaryAuth, email.trim().toLowerCase());
+    if (sendResetEmail) {
+      await sendPasswordResetEmail(secondaryAuth, cleanEmail);
+    }
     return uid;
   } finally {
     await signOut(secondaryAuth);
@@ -133,18 +145,110 @@ const deleteUserRecord = async (user, actor, moduleName) => {
 };
 
 // --- 1. MANAJEMEN WARGA BELAJAR (WB) ---
+// WB login pakai Nomor Induk (angka) + password yang di-generate & dicetak admin, BUKAN email.
+// Nomor Induk dipetakan ke synthetic email (buildWbLoginEmail) di balik layar.
 export const createWB = async (dataWB, actor) => {
-  const { nama, email, ...extra } = dataWB;
-  const uid = await createAuthAccount({
-    nama,
-    email,
-    kd_role: 22,
-    role: "wb",
-    status: "AKTIF",
-    extra,
+  const { nama, nomorInduk, emailKontak, paket, tahunAngkatan, nik, noHp } =
+    dataWB;
+  const ni = String(nomorInduk).trim();
+  const password = generateWbPassword();
+
+  const extra = { nomorInduk: ni, paket, tahunAngkatan };
+  if (nik && nik.trim()) extra.nik = nik.trim();
+  if (noHp && noHp.trim()) extra.noHp = noHp.trim();
+  if (emailKontak && emailKontak.trim())
+    extra.emailKontak = emailKontak.trim().toLowerCase();
+
+  let uid;
+  try {
+    uid = await createAuthAccount({
+      nama,
+      email: buildWbLoginEmail(ni),
+      kd_role: 22,
+      role: "wb",
+      status: "AKTIF",
+      extra,
+      password,
+      sendResetEmail: false,
+    });
+  } catch (err) {
+    if (err.code === "auth/email-already-in-use") {
+      throw new Error("Nomor Induk sudah dipakai Warga Belajar lain.", {
+        cause: err,
+      });
+    }
+    throw err;
+  }
+
+  // Simpan password supaya admin/superadmin bisa membacakannya lagi (WB lupa) & mereset.
+  // Rules: wbSecrets hanya bisa diakses staff, WB tidak bisa baca miliknya sendiri.
+  await setDoc(doc(db, "wbSecrets", uid), {
+    pwd: password,
+    nomorInduk: ni,
+    updatedAt: serverTimestamp(),
   });
-  await createAuditLog(actor, "CREATE", "MANAJEMEN_WB", uid, { nama });
-  return uid;
+
+  await createAuditLog(actor, "CREATE", "MANAJEMEN_WB", uid, {
+    nama,
+    nomorInduk: ni,
+  });
+  return { uid, nomorInduk: ni, password };
+};
+
+// Baca password WB tersimpan — untuk dibacakan ke WB yang lupa. Staff-only via rules.
+export const getWBPassword = async (wb) => {
+  const snap = await getDoc(doc(db, "wbSecrets", wb.id));
+  return snap.exists() ? snap.data().pwd || null : null;
+};
+
+// Reset password WB dari sisi admin. Tanpa Admin SDK, satu-satunya cara dari client:
+// login sebagai WB itu di app sekunder memakai password lama (dari wbSecrets), lalu updatePassword.
+export const resetWBPassword = async (wb, actor) => {
+  if (!wb.nomorInduk) {
+    throw new Error(
+      "WB ini dibuat sebelum fitur Nomor Induk. Gunakan 'Kirim Email Reset Password'.",
+    );
+  }
+  const secretSnap = await getDoc(doc(db, "wbSecrets", wb.id));
+  const oldPwd = secretSnap.exists() ? secretSnap.data().pwd : null;
+  if (!oldPwd) {
+    throw new Error(
+      "Password lama WB tidak tersimpan sehingga reset otomatis gagal. Hapus lalu tambah ulang WB.",
+    );
+  }
+
+  const newPwd = generateWbPassword();
+  const secondaryAuth = getSecondaryAuth();
+  try {
+    const cred = await signInWithEmailAndPassword(
+      secondaryAuth,
+      buildWbLoginEmail(wb.nomorInduk),
+      oldPwd,
+    );
+    await updatePassword(cred.user, newPwd);
+  } catch (err) {
+    if (
+      err.code === "auth/wrong-password" ||
+      err.code === "auth/invalid-credential"
+    ) {
+      throw new Error(
+        "Password tersimpan tidak cocok dengan akun login WB. Reset otomatis gagal.",
+        { cause: err },
+      );
+    }
+    throw err;
+  } finally {
+    await signOut(secondaryAuth).catch(() => {});
+  }
+
+  await updateDoc(doc(db, "wbSecrets", wb.id), {
+    pwd: newPwd,
+    updatedAt: serverTimestamp(),
+  });
+  await createAuditLog(actor, "UPDATE", "MANAJEMEN_WB", wb.id, {
+    event: "RESET_PASSWORD",
+  });
+  return newPwd;
 };
 
 // Migrasi data lama: sebelum status WB jadi 3-state, field ini boolean (true/false).
@@ -182,8 +286,10 @@ export const setWBLifecycleStatus = async (
   });
 };
 
-export const deleteWB = (wb, actor) =>
-  deleteUserRecord(wb, actor, "MANAJEMEN_WB");
+export const deleteWB = async (wb, actor) => {
+  await deleteDoc(doc(db, "wbSecrets", wb.id)).catch(() => {});
+  await deleteUserRecord(wb, actor, "MANAJEMEN_WB");
+};
 
 // --- 2. MANAJEMEN PENGAJAR ---
 export const createPengajar = async (dataPengajar, actor) => {
