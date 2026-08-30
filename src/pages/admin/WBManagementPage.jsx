@@ -7,12 +7,18 @@ import { db } from "../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
 import { createWB, normalizeWBStatus } from "../../services/adminServices";
 import {
+  DUMMY_TAHUN_ANGKATAN,
+  isDummyNomorInduk,
   isValidNomorInduk,
   suggestNomorInduk,
 } from "../../utils/wbLogin";
 import Pagination from "../../components/common/Pagination";
 import WBImportModal from "../../components/admin/WBImportModal";
-import { buildCredentialsCsv, downloadCsv } from "../../services/wbImport";
+import {
+  buildCredentialsCsv,
+  deleteAllWB,
+  downloadCsv,
+} from "../../services/wbImport";
 
 const PAKET_TABS = ["Semua", "Paket A", "Paket B", "Paket C"];
 
@@ -62,11 +68,25 @@ const WBManagementPage = () => {
 
   const [importOpen, setImportOpen] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
+  const [showDummy, setShowDummy] = useState(false);
+  const [isDummyForm, setIsDummyForm] = useState(false);
+  const [dummyBusy, setDummyBusy] = useState(false);
+
+  // WB uji (Nomor Induk 9999…) disembunyikan dari tabel, hitungan tab, & ekspor —
+  // kecuali toggle "Tampilkan WB uji" dinyalakan.
+  const dummyList = useMemo(
+    () => listWB.filter((wb) => isDummyNomorInduk(wb.nomorInduk)),
+    [listWB],
+  );
+  const visibleWB = useMemo(
+    () => (showDummy ? listWB : listWB.filter((wb) => !isDummyNomorInduk(wb.nomorInduk))),
+    [listWB, showDummy],
+  );
 
   const handleExportCsv = async () => {
     setExportBusy(true);
     try {
-      const csv = await buildCredentialsCsv(listWB);
+      const csv = await buildCredentialsCsv(visibleWB);
       downloadCsv(
         csv,
         `kredensial-wb-${new Date().toISOString().slice(0, 10)}.csv`,
@@ -75,6 +95,24 @@ const WBManagementPage = () => {
       alert("Gagal menyusun CSV: " + err.message);
     } finally {
       setExportBusy(false);
+    }
+  };
+
+  const handleDeleteDummy = async () => {
+    if (
+      !confirm(
+        `Hapus ${dummyList.length} WB uji (Nomor Induk 9999…)? Dokumen users + wbSecrets dihapus; akun Firebase Auth-nya perlu dibersihkan lewat skrip cleanup (--test-only).`,
+      )
+    )
+      return;
+    setDummyBusy(true);
+    try {
+      await deleteAllWB(dummyList, currentUser);
+      alert(`${dummyList.length} WB uji dihapus.`);
+    } catch (err) {
+      alert("Gagal menghapus sebagian WB uji: " + err.message);
+    } finally {
+      setDummyBusy(false);
     }
   };
 
@@ -88,12 +126,12 @@ const WBManagementPage = () => {
   }, []);
 
   const tahunOptionsFromData = useMemo(() => {
-    const fromData = listWB.map((wb) => wb.tahunAngkatan).filter(Boolean);
+    const fromData = visibleWB.map((wb) => wb.tahunAngkatan).filter(Boolean);
     return Array.from(new Set(fromData)).sort();
-  }, [listWB]);
+  }, [visibleWB]);
 
   const filteredWB = useMemo(() => {
-    return listWB.filter((wb) => {
+    return visibleWB.filter((wb) => {
       if (
         searchNama &&
         !wb.nama?.toLowerCase().includes(searchNama.toLowerCase()) &&
@@ -106,7 +144,7 @@ const WBManagementPage = () => {
         return false;
       return true;
     });
-  }, [listWB, searchNama, filterPaket, filterTahun]);
+  }, [visibleWB, searchNama, filterPaket, filterTahun]);
 
   const totalPages = Math.max(1, Math.ceil(filteredWB.length / pageSize));
   const pagedWB = useMemo(() => {
@@ -124,7 +162,23 @@ const WBManagementPage = () => {
       }),
     });
     setNomorIndukTouched(false);
+    setIsDummyForm(false);
     setIsModalOpen(true);
+  };
+
+  // Checkbox "WB uji": kunci tahun angkatan ke 9999/9999 -> Nomor Induk berawalan 9999.
+  const toggleDummyForm = (checked) => {
+    setIsDummyForm(checked);
+    const tahunAngkatan = checked
+      ? DUMMY_TAHUN_ANGKATAN
+      : DEFAULT_TAHUN_ANGKATAN;
+    setForm((prev) => ({
+      ...prev,
+      tahunAngkatan,
+      nomorInduk: nomorIndukTouched
+        ? prev.nomorInduk
+        : suggestNomorInduk({ paket: prev.paket, tahunAngkatan, existing: listWB }),
+    }));
   };
 
   // Sarankan ulang Nomor Induk saat paket / tahun angkatan berubah (kecuali admin sudah mengetiknya).
@@ -257,6 +311,36 @@ const WBManagementPage = () => {
         actor={currentUser}
       />
 
+      {/* Baris WB uji */}
+      {(dummyList.length > 0 || showDummy) && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm">
+          <label className="flex items-center gap-2 font-semibold text-amber-800">
+            <input
+              type="checkbox"
+              checked={showDummy}
+              onChange={(e) => {
+                setShowDummy(e.target.checked);
+                setPage(1);
+              }}
+            />
+            Tampilkan WB uji
+          </label>
+          <span className="text-amber-700">
+            {dummyList.length} WB uji (Nomor Induk 9999…)
+          </span>
+          {dummyList.length > 0 && (
+            <button
+              type="button"
+              disabled={dummyBusy}
+              onClick={handleDeleteDummy}
+              className="ml-auto px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-xs font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-50"
+            >
+              {dummyBusy ? "Menghapus…" : "Hapus WB Uji"}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Tab Program Paket */}
       <div className="flex gap-1 border-b border-slate-200 overflow-x-auto">
         {PAKET_TABS.map((tab) => (
@@ -275,8 +359,9 @@ const WBManagementPage = () => {
             {tab === "Semua" ? "Semua Paket" : tab}
             <span className="ml-1.5 text-xs text-slate-400">
               {tab === "Semua"
-                ? listWB.length
-                : listWB.filter((wb) => (wb.paket || "Paket C") === tab).length}
+                ? visibleWB.length
+                : visibleWB.filter((wb) => (wb.paket || "Paket C") === tab)
+                    .length}
             </span>
           </button>
         ))}
@@ -358,7 +443,16 @@ const WBManagementPage = () => {
                       {wb.nama}
                     </td>
                     <td className="px-4 py-4 font-mono text-xs text-slate-700">
-                      {wb.nomorInduk || (
+                      {wb.nomorInduk ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          {wb.nomorInduk}
+                          {isDummyNomorInduk(wb.nomorInduk) && (
+                            <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[10px] font-bold font-sans">
+                              UJI
+                            </span>
+                          )}
+                        </span>
+                      ) : (
                         <span className="text-slate-300">—</span>
                       )}
                     </td>
@@ -412,6 +506,15 @@ const WBManagementPage = () => {
               Tambah Warga Belajar
             </h2>
             <form onSubmit={handleSubmit} className="space-y-3">
+              <label className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm font-semibold text-amber-800">
+                <input
+                  type="checkbox"
+                  checked={isDummyForm}
+                  onChange={(e) => toggleDummyForm(e.target.checked)}
+                />
+                WB uji (data dummy) — Nomor Induk 9999…, tidak ikut hitungan &
+                ekspor
+              </label>
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1">
                   Nama Lengkap
@@ -443,19 +546,25 @@ const WBManagementPage = () => {
                   <label className="block text-xs font-semibold text-slate-600 mb-1">
                     Tahun Angkatan
                   </label>
-                  <select
-                    value={form.tahunAngkatan}
-                    onChange={(e) =>
-                      updateAddForm({ tahunAngkatan: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-                  >
-                    {TAHUN_ANGKATAN_OPTIONS.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
+                  {isDummyForm ? (
+                    <div className="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50 text-slate-500 font-mono">
+                      {DUMMY_TAHUN_ANGKATAN} (uji)
+                    </div>
+                  ) : (
+                    <select
+                      value={form.tahunAngkatan}
+                      onChange={(e) =>
+                        updateAddForm({ tahunAngkatan: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                    >
+                      {TAHUN_ANGKATAN_OPTIONS.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
               <div>

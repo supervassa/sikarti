@@ -17,12 +17,16 @@
  *  node scripts/cleanup-wb.mjs --yes --sweep   # + sapu akun Auth ber-email
  *                                              #   @wb.pkbm-kartini.local yang yatim
  *                                              #   + sisa dokumen wbSecrets
+ *  node scripts/cleanup-wb.mjs --yes --test-only
+ *                                              # HANYA WB uji (Nomor Induk 9999…):
+ *                                              #   data asli tidak disentuh sama sekali
  *
  *  Opsi lain:
  *   --key <path>   lokasi file service account (default ./serviceAccountKey.json)
  *
  * Yang TIDAK disentuh: akun admin / superadmin / pengajar (query dibatasi kd_role == 22
- * dan domain email WB). Skrip mencetak jumlah staf yang dipertahankan sebagai pengaman.
+ * dan domain email WB). Dengan --test-only, WB asli pun tidak disentuh — hanya yang
+ * Nomor Induk-nya berawalan 9999. Skrip mencetak jumlah staf yang dipertahankan.
  *
  * PERINGATAN: penghapusan akun Auth tidak bisa dibatalkan.
  */
@@ -41,8 +45,10 @@ const valOf = (f, d) => {
 
 const APPLY = has("--yes");
 const SWEEP = has("--sweep");
+const TEST_ONLY = has("--test-only");
 const KEY_PATH = resolve(process.cwd(), valOf("--key", "serviceAccountKey.json"));
 const WB_EMAIL_DOMAIN = "@wb.pkbm-kartini.local"; // samakan dengan src/utils/wbLogin.js
+const DUMMY_PREFIX = "9999"; // Nomor Induk WB uji (samakan dengan src/utils/wbLogin.js)
 const WB_KD_ROLE = 22;
 
 const chunk = (arr, n) =>
@@ -68,19 +74,24 @@ const db = getFirestore();
 const banner = APPLY
   ? "=== MODE EKSEKUSI (--yes): data akan DIHAPUS ==="
   : "=== DRY RUN: tidak ada yang dihapus. Tambah --yes untuk eksekusi. ===";
-console.log(`\n${banner}\n`);
+console.log(`\n${banner}`);
+if (TEST_ONLY) console.log(`(--test-only: HANYA WB uji, Nomor Induk ${DUMMY_PREFIX}…)`);
+console.log("");
 
 // ── 1. Kumpulkan WB dari Firestore (users kd_role == 22) ─────────────────────
 const wbSnap = await db
   .collection("users")
   .where("kd_role", "==", WB_KD_ROLE)
   .get();
-const wbDocs = wbSnap.docs.map((d) => ({
+let wbDocs = wbSnap.docs.map((d) => ({
   uid: d.id,
   nama: d.get("nama") || "(tanpa nama)",
   email: d.get("email") || "",
-  nomorInduk: d.get("nomorInduk") || "",
+  nomorInduk: String(d.get("nomorInduk") || ""),
 }));
+if (TEST_ONLY) {
+  wbDocs = wbDocs.filter((w) => w.nomorInduk.startsWith(DUMMY_PREFIX));
+}
 
 // Pengaman: hitung staf yang TIDAK akan disentuh.
 const allUsers = await db.collection("users").get();
@@ -117,11 +128,12 @@ if (SWEEP) {
   do {
     const page = await auth.listUsers(1000, pageToken);
     for (const u of page.users) {
-      if (
-        u.email &&
-        u.email.toLowerCase().endsWith(WB_EMAIL_DOMAIN) &&
-        !wbUidSet.has(u.uid)
-      ) {
+      const email = (u.email || "").toLowerCase();
+      const isWbEmail = email.endsWith(WB_EMAIL_DOMAIN);
+      const matchesScope = TEST_ONLY
+        ? email.startsWith(DUMMY_PREFIX)
+        : true;
+      if (isWbEmail && matchesScope && !wbUidSet.has(u.uid)) {
         authToDelete.set(u.uid, u.email);
         sweepCount += 1;
       }
@@ -160,7 +172,7 @@ for (const w of wbDocs) {
   fsRefs.push(db.collection("users").doc(w.uid));
   fsRefs.push(db.collection("wbSecrets").doc(w.uid));
 }
-if (SWEEP) {
+if (SWEEP && !TEST_ONLY) {
   const secretsSnap = await db.collection("wbSecrets").get();
   secretsSnap.docs.forEach((d) => {
     if (!wbUidSet.has(d.id)) fsRefs.push(d.ref);

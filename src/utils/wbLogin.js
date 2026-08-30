@@ -23,6 +23,12 @@ const NOMOR_INDUK_RE = /^\d{9}$/;
 
 export const isValidNomorInduk = (value) => NOMOR_INDUK_RE.test(String(value || "").trim());
 
+// WB uji/dummy: tahun angkatan "9999/9999" -> Nomor Induk berawalan "9999".
+// Tahun 9999 mustahil jadi angkatan asli, jadi dipakai sebagai penanda data uji.
+export const DUMMY_TAHUN_ANGKATAN = "9999/9999";
+export const isDummyNomorInduk = (value) =>
+  String(value || "").trim().startsWith("9999");
+
 // Ambil tahun (YYYY) dari string tahun angkatan "2026/2027" atau "2026".
 const tahunAwal = (tahunAngkatan) => {
   const match = String(tahunAngkatan || "").match(/\d{4}/);

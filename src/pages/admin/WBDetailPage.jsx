@@ -14,6 +14,7 @@ import {
   getWBPassword,
   resetWBPassword,
 } from "../../services/adminServices";
+import { isDummyNomorInduk } from "../../utils/wbLogin";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const TAHUN_ANGKATAN_OPTIONS = Array.from({ length: 5 }, (_, i) => {
@@ -260,11 +261,18 @@ const WBDetailPage = ({ wbId }) => {
         </Link>
         <div className="mt-2 flex items-center justify-between gap-4">
           <h1 className="text-2xl font-bold text-slate-900">{wb.nama}</h1>
-          <span
-            className={`px-2.5 py-1 rounded-full text-xs font-bold ${statusMeta.className}`}
-          >
-            {statusMeta.label}
-          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            {isDummyNomorInduk(wb.nomorInduk) && (
+              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
+                DATA UJI
+              </span>
+            )}
+            <span
+              className={`px-2.5 py-1 rounded-full text-xs font-bold ${statusMeta.className}`}
+            >
+              {statusMeta.label}
+            </span>
+          </div>
         </div>
         <p className="text-sm text-slate-500">Detail Warga Belajar</p>
       </div>
