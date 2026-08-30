@@ -44,7 +44,7 @@ const LogoutButton = () => {
     <button
       onClick={async () => {
         await signOut(auth);
-        navigate("/login", { replace: true });
+        navigate("/pendaftaran/login", { replace: true });
       }}
       className="mt-4 px-4 py-2 text-sm bg-slate-800 text-white rounded-lg font-semibold hover:bg-slate-900"
     >

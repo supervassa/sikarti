@@ -92,7 +92,7 @@ const RegistrationPage = () => {
                   sejak sekarang.
                 </p>
                 <Link
-                  to="/login"
+                  to="/pendaftaran/login"
                   className="inline-block px-6 py-2.5 bg-[#0b1f3d] text-white font-bold rounded-lg hover:bg-blue-900"
                 >
                   Ke Halaman Login

@@ -235,7 +235,7 @@ service cloud.firestore {
       return data.keys().hasAll(['namaMapel', 'hari', 'jamMulai', 'jamSelesai', 'pengajar', 'paket', 'createdAt', 'updatedAt'])
         && data.keys().hasOnly(['namaMapel', 'hari', 'jamMulai', 'jamSelesai', 'pengajar', 'paket', 'createdAt', 'updatedAt'])
         && data.namaMapel is string && data.namaMapel.size() > 0 && data.namaMapel.size() <= 100
-        && data.hari in ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+        && data.hari in ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
         && data.jamMulai is string && data.jamMulai.size() <= 8
         && data.jamSelesai is string && data.jamSelesai.size() <= 8
         && data.pengajar is string && data.pengajar.size() <= 100
@@ -298,7 +298,7 @@ service cloud.firestore {
         && data.scheduleId is string && data.scheduleId.size() > 0
         && data.namaMapel is string && data.namaMapel.size() > 0 && data.namaMapel.size() <= 100
         && data.paket in ['Paket A', 'Paket B', 'Paket C']
-        && data.hari in ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+        && data.hari in ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
         && data.tanggal is string && data.tanggal.size() == 10
         && data.durasiMenit is number && data.durasiMenit > 0 && data.durasiMenit <= 600
         && data.pengajarId == request.auth.uid

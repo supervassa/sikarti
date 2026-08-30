@@ -14,7 +14,7 @@ const CalonWBLayout = () => {
 
   const handleLogout = async () => {
     await signOut(auth);
-    navigate("/login", { replace: true });
+    navigate("/pendaftaran/login", { replace: true });
   };
 
   const displayName = currentUser?.nama || "Calon Warga Belajar";

@@ -45,6 +45,7 @@ import DashboardPengajar from "../pages/pengajar/DashboardPengajar.jsx";
 import JadwalPengajar from "../pages/pengajar/JadwalPengajar.jsx";
 import ProfilPengajar from "../pages/pengajar/ProfilPengajar.jsx";
 import CalonWBLayout from "../layouts/CalonWBLayout.jsx";
+import CalonLoginPage from "../pages/calon/CalonLoginPage.jsx";
 import TagihanPendaftaranPage from "../pages/calon/TagihanPendaftaranPage.jsx";
 import CalonWBProfilPage from "../pages/calon/CalonWBProfilPage.jsx";
 
@@ -60,6 +61,7 @@ const AppRoutes = () => {
         <Route path="/berita/:id" element={<NewsDetail />} />
         <Route path="/daftar" element={<RegistrationPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/pendaftaran/login" element={<CalonLoginPage />} />
       </Route>
 
       {/* 2. RUTE SUPERADMIN KHUSUS */}

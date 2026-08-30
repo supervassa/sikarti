@@ -17,7 +17,15 @@ import {
 import { normalizeWBStatus } from "../../services/adminServices";
 import CaptureAttendanceModal from "../../components/common/CaptureAttendanceModal";
 
-const HARI_ORDER = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const HARI_ORDER = [
+  "Senin",
+  "Selasa",
+  "Rabu",
+  "Kamis",
+  "Jumat",
+  "Sabtu",
+  "Minggu",
+];
 const HARI_INDEX = [
   "Minggu",
   "Senin",
@@ -84,8 +92,10 @@ const JadwalPengajar = () => {
   }, []);
 
   useEffect(() => {
+    // Rule users membolehkan pengajar list HANYA jika query memfilter role == 'wb'
+    // (harus field yang sama persis dengan rule, bukan kd_role).
     const unsubscribe = onSnapshot(
-      query(collection(db, "users"), where("kd_role", "==", 22)),
+      query(collection(db, "users"), where("role", "==", "wb")),
       (snapshot) => {
         setWbList(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
       },
@@ -99,7 +109,9 @@ const JadwalPengajar = () => {
   useEffect(() => {
     if (!detailItem) return;
     const session = sessionsToday.find((s) => s.scheduleId === detailItem.id);
-    if (!session) return;
+    // Rule presensi: pengajar hanya boleh baca presensi sesi yang DIA mulai sendiri
+    // (isPengajarOfSession). Sesi milik pengajar lain -> permission-denied, jadi di-skip.
+    if (!session || session.pengajarId !== currentUser.uid) return;
     const q = query(
       collection(db, "presensi"),
       where("sessionId", "==", session.id),
@@ -109,7 +121,7 @@ const JadwalPengajar = () => {
       setCheckedInIds(new Set(snapshot.docs.map((d) => d.data().wbId)));
     });
     return unsubscribe;
-  }, [detailItem, sessionsToday]);
+  }, [detailItem, sessionsToday, currentUser]);
 
   // Finalisasi otomatis: begitu sesi berakhir (distop atau durasi habis) sambil pengajar
   // masih di halaman ini, WB yang belum presensi langsung ditandai Alpa. finalizeAttempted

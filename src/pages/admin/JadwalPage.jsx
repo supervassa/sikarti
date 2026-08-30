@@ -26,7 +26,7 @@ const addMinutes = (hhmm, add) => {
 };
 
 const PAKET_TABS = ["Paket A", "Paket B", "Paket C"];
-const HARI = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "minggu"];
+const HARI = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
 
 const emptyForm = (paket) => ({
   namaMapel: "",

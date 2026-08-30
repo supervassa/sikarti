@@ -368,11 +368,20 @@ const LoginPage = () => {
         </div>
 
         {/* Footer Text */}
-        <div className="bg-gray-50 py-4 px-8 border-t border-gray-100 text-center">
+        <div className="bg-gray-50 py-4 px-8 border-t border-gray-100 text-center space-y-1">
           <p className="text-sm text-gray-600">
             Kembali ke{" "}
             <Link to="/" className="font-medium text-red-600 hover:text-red-500">
               Beranda
+            </Link>
+          </p>
+          <p className="text-xs text-gray-500">
+            Calon pendaftar?{" "}
+            <Link
+              to="/pendaftaran/login"
+              className="font-medium text-amber-600 hover:text-amber-500"
+            >
+              Masuk di sini
             </Link>
           </p>
         </div>
