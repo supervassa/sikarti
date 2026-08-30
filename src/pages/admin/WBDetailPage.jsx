@@ -18,6 +18,11 @@ import {
 } from "../../services/adminServices";
 import { readFileField } from "../../services/registrationServices";
 import { isDummyNomorInduk } from "../../utils/wbLogin";
+import DateField from "../../components/common/DateField";
+import SelectField from "../../components/common/SelectField";
+import { PAKET_OPTIONS } from "../../config/opsi";
+
+const TODAY_ISO = new Date().toISOString().slice(0, 10);
 
 const JENIS_KELAMIN_OPTIONS = ["Laki-laki", "Perempuan"];
 const AGAMA_OPTIONS = [
@@ -450,35 +455,23 @@ const WBDetailPage = ({ wbId }) => {
               <label className="block text-xs font-semibold text-slate-600 mb-1">
                 Program Paket
               </label>
-              <select
+              <SelectField
                 value={editForm.paket}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, paket: e.target.value })
-                }
-                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-              >
-                <option value="Paket A">Paket A (Setara SD)</option>
-                <option value="Paket B">Paket B (Setara SMP)</option>
-                <option value="Paket C">Paket C (Setara SMA)</option>
-              </select>
+                onChange={(val) => setEditForm({ ...editForm, paket: val })}
+                options={PAKET_OPTIONS}
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">
                 Tahun Angkatan
               </label>
-              <select
+              <SelectField
                 value={editForm.tahunAngkatan}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, tahunAngkatan: e.target.value })
+                onChange={(val) =>
+                  setEditForm({ ...editForm, tahunAngkatan: val })
                 }
-                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-              >
-                {tahunOptions.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
+                options={tahunOptions}
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -534,20 +527,14 @@ const WBDetailPage = ({ wbId }) => {
               <label className="block text-xs font-semibold text-slate-600 mb-1">
                 Jenis Kelamin
               </label>
-              <select
+              <SelectField
                 value={editForm.jenisKelamin}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, jenisKelamin: e.target.value })
+                onChange={(val) =>
+                  setEditForm({ ...editForm, jenisKelamin: val })
                 }
-                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-              >
-                <option value="">—</option>
-                {JENIS_KELAMIN_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
+                placeholder="—"
+                options={JENIS_KELAMIN_OPTIONS}
+              />
             </div>
           </div>
 
@@ -556,20 +543,12 @@ const WBDetailPage = ({ wbId }) => {
               <label className="block text-xs font-semibold text-slate-600 mb-1">
                 Agama
               </label>
-              <select
+              <SelectField
                 value={editForm.agama}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, agama: e.target.value })
-                }
-                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-              >
-                <option value="">—</option>
-                {AGAMA_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setEditForm({ ...editForm, agama: val })}
+                placeholder="—"
+                options={AGAMA_OPTIONS}
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">
@@ -605,13 +584,12 @@ const WBDetailPage = ({ wbId }) => {
               <label className="block text-xs font-semibold text-slate-600 mb-1">
                 Tanggal Lahir
               </label>
-              <input
-                type="date"
+              <DateField
                 value={editForm.tanggalLahir}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, tanggalLahir: e.target.value })
+                onChange={(iso) =>
+                  setEditForm({ ...editForm, tanggalLahir: iso })
                 }
-                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                max={TODAY_ISO}
               />
             </div>
           </div>
@@ -824,36 +802,28 @@ const WBDetailPage = ({ wbId }) => {
         )}
       </Card>
 
-      <Card title="Status Keanggotaan">
-        <select
+      <Card title="Status Akademik">
+        <SelectField
           value={statusForm.status}
-          onChange={(e) =>
-            setStatusForm({ ...statusForm, status: e.target.value })
-          }
-          className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-        >
-          <option value="AKTIF">Aktif</option>
-          <option value="NONAKTIF">Nonaktif</option>
-          <option value="LULUS">Lulus</option>
-        </select>
+          onChange={(val) => setStatusForm({ ...statusForm, status: val })}
+          options={[
+            { value: "AKTIF", label: "Aktif" },
+            { value: "NONAKTIF", label: "Nonaktif" },
+            { value: "LULUS", label: "Lulus" },
+          ]}
+        />
         {statusForm.status === "LULUS" && (
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1">
               Tahun Lulus
             </label>
-            <select
+            <SelectField
               value={statusForm.tahunLulus}
-              onChange={(e) =>
-                setStatusForm({ ...statusForm, tahunLulus: e.target.value })
+              onChange={(val) =>
+                setStatusForm({ ...statusForm, tahunLulus: val })
               }
-              className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-            >
-              {tahunOptions.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+              options={tahunOptions}
+            />
           </div>
         )}
         {statusForm.status === "NONAKTIF" && (
@@ -861,19 +831,13 @@ const WBDetailPage = ({ wbId }) => {
             <label className="block text-xs font-semibold text-slate-600 mb-1">
               Terakhir Aktif
             </label>
-            <select
+            <SelectField
               value={statusForm.terakhirAktif}
-              onChange={(e) =>
-                setStatusForm({ ...statusForm, terakhirAktif: e.target.value })
+              onChange={(val) =>
+                setStatusForm({ ...statusForm, terakhirAktif: val })
               }
-              className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-            >
-              {tahunOptions.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+              options={tahunOptions}
+            />
           </div>
         )}
         <button

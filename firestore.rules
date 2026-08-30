@@ -50,7 +50,7 @@ service cloud.firestore {
     // (createdAt/updatedAt harus baru) maupun edit (createdAt dikunci di pemanggil).
     function isValidWBProfileShape(data) {
       return data.keys().hasAll(['nama', 'email', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
-        && data.keys().hasOnly(['nama', 'email', 'emailKontak', 'nomorInduk', 'paket', 'nik', 'noHp', 'tahunAngkatan', 'tahunLulus', 'terakhirAktif', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt', 'nisn', 'jenisKelamin', 'agama', 'tempatLahir', 'tanggalLahir', 'alamat', 'sekolahAsal', 'namaAyah', 'namaIbu', 'tingkat', 'nis'])
+        && data.keys().hasOnly(['nama', 'email', 'emailKontak', 'nomorInduk', 'paket', 'nik', 'noHp', 'tahunAngkatan', 'tahunLulus', 'terakhirAktif', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt', 'lastLogin', 'nisn', 'jenisKelamin', 'agama', 'tempatLahir', 'tanggalLahir', 'alamat', 'sekolahAsal', 'namaAyah', 'namaIbu', 'tingkat', 'nis'])
         && data.nama is string && data.nama.size() > 1 && data.nama.size() <= 100
         && data.email is string && data.email.size() > 4 && data.email.size() <= 254
         && data.role == 'wb' && data.kd_role == 22 && data.status in ['AKTIF', 'NONAKTIF', 'LULUS']
@@ -86,7 +86,7 @@ service cloud.firestore {
     }
     function isValidPengajarProfileShape(data) {
       return data.keys().hasAll(['nama', 'email', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
-        && data.keys().hasOnly(['nama', 'email', 'mapelDiampu', 'noHp', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['nama', 'email', 'mapelDiampu', 'noHp', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt', 'lastLogin'])
         && data.nama is string && data.nama.size() > 1 && data.nama.size() <= 100
         && data.email is string && data.email.size() > 4 && data.email.size() <= 254
         && data.role == 'pengajar' && data.kd_role == 33 && data.status is bool
@@ -114,7 +114,7 @@ service cloud.firestore {
         && request.resource.data.status == 'AKTIF'
         && request.resource.data.createdAt == resource.data.createdAt
         && isRecentServerTime(request.resource.data.updatedAt)
-        && request.resource.data.keys().hasOnly(['nama', 'email', 'paket', 'nik', 'noHp', 'tahunAngkatan', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['nama', 'email', 'paket', 'nik', 'noHp', 'tahunAngkatan', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt', 'lastLogin'])
         && request.resource.data.keys().hasAll(['nama', 'email', 'paket', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
         && request.resource.data.nama is string && request.resource.data.nama.size() > 1 && request.resource.data.nama.size() <= 100
         && request.resource.data.email is string && request.resource.data.email.size() > 4
@@ -183,6 +183,24 @@ service cloud.firestore {
         && request.resource.data.noHp is string && request.resource.data.noHp.size() <= 30
         && isRecentServerTime(request.resource.data.updatedAt);
     }
+    // WB menyunting profilnya sendiri (halaman Profil): semua biodata + paket + tahunAngkatan
+    // + nik boleh berubah. Yang DIKUNCI: status keanggotaan, email login, nomorInduk,
+    // role/kd_role/createdAt/lastLogin. Bentuk dokumen tetap divalidasi isValidWBProfileShape.
+    function isValidWBSelfProfileUpdate(uid) {
+      return isOwner(uid)
+        && resource.data.role == 'wb'
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.kd_role == resource.data.kd_role
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.email == resource.data.email
+        && (('nomorInduk' in resource.data.keys()) == ('nomorInduk' in request.resource.data.keys()))
+        && (!('nomorInduk' in resource.data.keys()) || request.resource.data.nomorInduk == resource.data.nomorInduk)
+        && (('lastLogin' in resource.data.keys()) == ('lastLogin' in request.resource.data.keys()))
+        && (!('lastLogin' in resource.data.keys()) || request.resource.data.lastLogin == resource.data.lastLogin)
+        && isValidWBProfileShape(request.resource.data)
+        && isRecentServerTime(request.resource.data.updatedAt);
+    }
     function isValidAuditLog(data) {
       return data.keys().hasOnly(['action', 'module', 'targetId', 'targetType', 'performedBy', 'performedByName', 'performedByEmail', 'timestamp', 'metadata'])
         && data.keys().hasAll(['action', 'module', 'targetId', 'targetType', 'performedBy', 'performedByName', 'performedByEmail', 'timestamp', 'metadata'])
@@ -231,9 +249,11 @@ service cloud.firestore {
     // baik untuk create (createdAt harus baru) maupun update (createdAt dikunci, updatedAt baru).
     function isValidMapelShape(data) {
       return data.keys().hasAll(['nama', 'paket', 'createdAt', 'updatedAt'])
-        && data.keys().hasOnly(['nama', 'paket', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['nama', 'paket', 'kode', 'createdAt', 'updatedAt'])
         && data.nama is string && data.nama.size() > 0 && data.nama.size() <= 100
-        && data.paket in ['Paket A', 'Paket B', 'Paket C'];
+        && data.paket in ['Paket A', 'Paket B', 'Paket C']
+        // kode mapel opsional (mapel lama belum punya); auto-generate saat create/edit.
+        && (!('kode' in data.keys()) || (data.kode is string && data.kode.size() > 0 && data.kode.size() <= 12));
     }
     function isValidMapelCreate(data) {
       return isValidMapelShape(data) && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt);
@@ -495,6 +515,7 @@ service cloud.firestore {
         || (isOwner(uid) && isValidCalonWBProfile(request.resource.data));
       allow update: if (isOwner(uid) && isValidLastLoginUpdate())
         || (isOwner(uid) && isValidSelfContactUpdate())
+        || isValidWBSelfProfileUpdate(uid)
         || (isSuperadmin() && isValidAdminStatusUpdate())
         || (isSuperadmin() && isValidAdminRoleChange(uid))
         || (isStaff() && isValidCalonToWBActivation())
@@ -521,9 +542,11 @@ service cloud.firestore {
     // wbNik/{nik}: indeks unik NIK -> uid. Karena "allow create" hanya berlaku saat
     // path belum ada, penulisan ke NIK yang sudah dipakai gagal (jadi "update", ditolak).
     // Ini penjaga keras terhadap Warga Belajar terdaftar dua kali.
+    // Staff mengelola untuk siapa saja; WB hanya boleh entri yang menunjuk uid-nya sendiri
+    // (dipakai saat WB mengganti NIK lewat halaman Profil).
     match /wbNik/{nik} {
-      allow read: if isStaff();
-      allow create: if isStaff()
+      allow read: if isSignedIn();
+      allow create: if (isStaff() || (isSignedIn() && request.resource.data.uid == request.auth.uid))
         && request.resource.data.keys().hasOnly(['uid', 'nik', 'createdAt'])
         && request.resource.data.keys().hasAll(['uid', 'nik', 'createdAt'])
         && request.resource.data.uid is string && request.resource.data.uid.size() > 0
@@ -531,21 +554,22 @@ service cloud.firestore {
         && nik.matches('^[0-9]{16}$')
         && isRecentServerTime(request.resource.data.createdAt);
       allow update: if false;
-      allow delete: if isStaff();
+      allow delete: if isStaff() || (isSignedIn() && resource.data.uid == request.auth.uid);
     }
 
     // wbPhotos/{uid}: pas foto WB (base64) dipisah dari dokumen users supaya daftar WB
     // tetap ringan. Hanya staff yang menulis; WB & pengajar boleh membaca.
     match /wbPhotos/{uid} {
       allow read: if isOwner(uid) || isStaff() || isPengajar();
-      allow create, update: if isStaff()
+      // Staff kelola foto siapa saja; WB kelola fotonya sendiri (halaman Profil).
+      allow create, update: if (isStaff() || isOwner(uid))
         && request.resource.data.keys().hasOnly(['base64', 'updatedAt'])
         && request.resource.data.keys().hasAll(['base64', 'updatedAt'])
         && request.resource.data.base64 is string
         && request.resource.data.base64.size() > 0
         && request.resource.data.base64.size() <= 900000
         && isRecentServerTime(request.resource.data.updatedAt);
-      allow delete: if isStaff();
+      allow delete: if isStaff() || isOwner(uid);
     }
 
     match /admins/{uid} {
@@ -602,7 +626,9 @@ service cloud.firestore {
       allow create: if (isStaff() && isValidAdminPresensiDoc(request.resource.data))
         || (isSignedIn() && isValidSelfCheckinDoc(request.resource.data))
         || (isSignedIn() && isValidPengajarAbsentDoc(request.resource.data));
-      allow update, delete: if false;
+      allow update: if false;
+      // Staff boleh menghapus baris rekap kehadiran WB (koreksi salah catat).
+      allow delete: if isStaff();
     }
 
     // Sesi mengajar: pengajar "Mulai Mengajar" jadi bukti kehadirannya sendiri (foto+lokasi),
@@ -612,7 +638,8 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create: if isPengajar() && isValidClassSessionDoc(request.resource.data);
       allow update: if isValidSessionStop() || isValidSessionFinalize();
-      allow delete: if false;
+      // Staff boleh menghapus sesi mengajar dari Rekap Kehadiran (koreksi salah catat).
+      allow delete: if isStaff();
     }
 
     // WB boleh baca tagihan sendiri; hanya staff yang boleh membuat/mengubah status.

@@ -15,6 +15,8 @@ import {
   deleteJadwal,
 } from "../../services/adminServices";
 import TimeField from "../../components/common/TimeField";
+import SelectField from "../../components/common/SelectField";
+import { PAKET_OPTIONS } from "../../config/opsi";
 
 // Tambah menit ke "HH:mm" (untuk saran jam selesai). Balik ke "HH:mm".
 const addMinutes = (hhmm, add) => {
@@ -79,6 +81,14 @@ const JadwalPage = () => {
     () => jadwalList.filter((j) => j.paket === activeTab),
     [jadwalList, activeTab],
   );
+  // Kode mapel per (paket, nama) — schedules cuma simpan namaMapel.
+  const kodeByNama = useMemo(() => {
+    const map = {};
+    mapelList.forEach((m) => {
+      if (m.paket === activeTab && m.nama && m.kode) map[m.nama] = m.kode;
+    });
+    return map;
+  }, [mapelList, activeTab]);
   const filteredPengajar = useMemo(() => {
     if (!pengajarQuery) return pengajarList;
     return pengajarList.filter((p) =>
@@ -199,6 +209,7 @@ const JadwalPage = () => {
               <tr>
                 <th className="px-6 py-3">Hari</th>
                 <th className="px-4 py-3">Jam</th>
+                <th className="px-4 py-3">Kode</th>
                 <th className="px-4 py-3">Mapel</th>
                 <th className="px-4 py-3">Pengajar</th>
                 <th className="px-6 py-3">Aksi</th>
@@ -207,13 +218,13 @@ const JadwalPage = () => {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="text-center py-8 text-slate-400">
+                  <td colSpan="6" className="text-center py-8 text-slate-400">
                     Memuat data jadwal...
                   </td>
                 </tr>
               ) : jadwalForTab.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="text-center py-8 text-slate-400">
+                  <td colSpan="6" className="text-center py-8 text-slate-400">
                     Belum ada jadwal untuk {activeTab}.
                   </td>
                 </tr>
@@ -228,6 +239,15 @@ const JadwalPage = () => {
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
                       {j.jamMulai} - {j.jamSelesai}
+                    </td>
+                    <td className="px-4 py-3">
+                      {kodeByNama[j.namaMapel] ? (
+                        <span className="font-mono font-bold text-xs px-2 py-1 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                          {kodeByNama[j.namaMapel]}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">-</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300">
                       {j.namaMapel}
@@ -275,53 +295,38 @@ const JadwalPage = () => {
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Program Paket
                 </label>
-                <select
+                <SelectField
                   value={form.paket}
-                  onChange={(e) => setForm({ ...form, paket: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500 bg-transparent"
-                >
-                  <option value="Paket A">Paket A (Setara SD)</option>
-                  <option value="Paket B">Paket B (Setara SMP)</option>
-                  <option value="Paket C">Paket C (Setara SMA)</option>
-                </select>
+                  onChange={(val) => setForm({ ...form, paket: val })}
+                  options={PAKET_OPTIONS}
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Mata Pelajaran
                 </label>
-                <select
+                <SelectField
                   required
                   value={form.namaMapel}
-                  onChange={(e) =>
-                    setForm({ ...form, namaMapel: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500 bg-transparent"
-                >
-                  <option value="">Pilih mapel...</option>
-                  {mapelList
+                  onChange={(val) => setForm({ ...form, namaMapel: val })}
+                  placeholder="Pilih mapel..."
+                  options={mapelList
                     .filter((m) => m.paket === form.paket)
-                    .map((m) => (
-                      <option key={m.id} value={m.nama}>
-                        {m.nama}
-                      </option>
-                    ))}
-                </select>
+                    .map((m) => ({
+                      value: m.nama,
+                      label: m.kode ? `${m.kode} — ${m.nama}` : m.nama,
+                    }))}
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Hari
                 </label>
-                <select
+                <SelectField
                   value={form.hari}
-                  onChange={(e) => setForm({ ...form, hari: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500 bg-transparent"
-                >
-                  {HARI.map((h) => (
-                    <option key={h} value={h}>
-                      {h}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setForm({ ...form, hari: val })}
+                  options={HARI}
+                />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>

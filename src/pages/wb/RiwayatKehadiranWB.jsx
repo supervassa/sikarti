@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
+import { formatTanggal } from "../../utils/tanggal";
 
 const STATUS_STYLE = {
   Hadir:
@@ -91,7 +92,7 @@ const RiwayatKehadiranWB = () => {
                     className="hover:bg-slate-50 dark:hover:bg-slate-800/50"
                   >
                     <td className="px-6 py-4 text-slate-700 dark:text-slate-200">
-                      {r.tanggal}
+                      {formatTanggal(r.tanggal)}
                     </td>
                     <td className="px-4 py-4">
                       <span

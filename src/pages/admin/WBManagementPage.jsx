@@ -14,12 +14,17 @@ import {
   suggestNomorInduk,
 } from "../../utils/wbLogin";
 import Pagination from "../../components/common/Pagination";
+import DateField from "../../components/common/DateField";
+import SelectField from "../../components/common/SelectField";
 import WBImportModal from "../../components/admin/WBImportModal";
+import { PAKET_OPTIONS } from "../../config/opsi";
 import {
   buildCredentialsCsv,
   deleteAllWB,
   downloadCsv,
 } from "../../services/wbImport";
+
+const TODAY_ISO = new Date().toISOString().slice(0, 10);
 
 const PAKET_TABS = ["Semua", "Paket A", "Paket B", "Paket C"];
 
@@ -419,21 +424,18 @@ const WBManagementPage = () => {
             className="bg-transparent outline-none text-sm text-slate-700 placeholder:text-slate-400 w-full"
           />
         </div>
-        <select
+        <SelectField
+          className="w-48"
           value={filterTahun}
-          onChange={(e) => {
-            setFilterTahun(e.target.value);
+          onChange={(val) => {
+            setFilterTahun(val);
             setPage(1);
           }}
-          className="px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-red-500 bg-white"
-        >
-          <option value="Semua">Semua Angkatan</option>
-          {tahunOptionsFromData.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
+          options={[
+            { value: "Semua", label: "Semua Angkatan" },
+            ...tahunOptionsFromData.map((t) => ({ value: t, label: t })),
+          ]}
+        />
       </div>
 
       {/* Tabel Data WB */}
@@ -566,15 +568,11 @@ const WBManagementPage = () => {
                   <label className="block text-xs font-semibold text-slate-600 mb-1">
                     Program Paket
                   </label>
-                  <select
+                  <SelectField
                     value={form.paket}
-                    onChange={(e) => updateAddForm({ paket: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-                  >
-                    <option value="Paket A">Paket A (Setara SD)</option>
-                    <option value="Paket B">Paket B (Setara SMP)</option>
-                    <option value="Paket C">Paket C (Setara SMA)</option>
-                  </select>
+                    onChange={(val) => updateAddForm({ paket: val })}
+                    options={PAKET_OPTIONS}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">
@@ -585,19 +583,11 @@ const WBManagementPage = () => {
                       {DUMMY_TAHUN_ANGKATAN} (uji)
                     </div>
                   ) : (
-                    <select
+                    <SelectField
                       value={form.tahunAngkatan}
-                      onChange={(e) =>
-                        updateAddForm({ tahunAngkatan: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-                    >
-                      {TAHUN_ANGKATAN_OPTIONS.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => updateAddForm({ tahunAngkatan: val })}
+                      options={TAHUN_ANGKATAN_OPTIONS}
+                    />
                   )}
                 </div>
               </div>
@@ -691,20 +681,12 @@ const WBManagementPage = () => {
                       <label className="block text-xs font-semibold text-slate-600 mb-1">
                         Jenis Kelamin
                       </label>
-                      <select
+                      <SelectField
                         value={form.jenisKelamin}
-                        onChange={(e) =>
-                          updateAddForm({ jenisKelamin: e.target.value })
-                        }
-                        className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-                      >
-                        <option value="">—</option>
-                        {JENIS_KELAMIN_OPTIONS.map((o) => (
-                          <option key={o} value={o}>
-                            {o}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(val) => updateAddForm({ jenisKelamin: val })}
+                        placeholder="—"
+                        options={JENIS_KELAMIN_OPTIONS}
+                      />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -712,18 +694,12 @@ const WBManagementPage = () => {
                       <label className="block text-xs font-semibold text-slate-600 mb-1">
                         Agama
                       </label>
-                      <select
+                      <SelectField
                         value={form.agama}
-                        onChange={(e) => updateAddForm({ agama: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-                      >
-                        <option value="">—</option>
-                        {AGAMA_OPTIONS.map((o) => (
-                          <option key={o} value={o}>
-                            {o}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(val) => updateAddForm({ agama: val })}
+                        placeholder="—"
+                        options={AGAMA_OPTIONS}
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-600 mb-1">
@@ -758,13 +734,10 @@ const WBManagementPage = () => {
                       <label className="block text-xs font-semibold text-slate-600 mb-1">
                         Tanggal Lahir
                       </label>
-                      <input
-                        type="date"
+                      <DateField
                         value={form.tanggalLahir}
-                        onChange={(e) =>
-                          updateAddForm({ tanggalLahir: e.target.value })
-                        }
-                        className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                        onChange={(iso) => updateAddForm({ tanggalLahir: iso })}
+                        max={TODAY_ISO}
                       />
                     </div>
                   </div>

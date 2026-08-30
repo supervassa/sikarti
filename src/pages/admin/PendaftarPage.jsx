@@ -12,6 +12,7 @@ import {
   rejectRegistrationPayment,
   verifyRegistrationPayment,
 } from "../../services/adminServices";
+import { formatTanggal } from "../../utils/tanggal";
 
 const STATUS_META = {
   MENUNGGU_PEMBAYARAN: {
@@ -243,7 +244,7 @@ const PendaftarPage = () => {
               <p>{detail.nisn || "-"}</p>
               <p className="text-slate-400 text-xs">TTL</p>
               <p>
-                {detail.tempatLahir}, {detail.tanggalLahir}
+                {detail.tempatLahir}, {formatTanggal(detail.tanggalLahir)}
               </p>
               <p className="text-slate-400 text-xs">Jenis Kelamin</p>
               <p>

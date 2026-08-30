@@ -4,8 +4,11 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
 import { completeCalonProfile } from "../../services/registrationServices";
+import DateField from "../../components/common/DateField";
+import SelectField from "../../components/common/SelectField";
 
 const PAKET_OPTIONS = ["Paket A", "Paket B", "Paket C"];
+const TODAY_ISO = new Date().toISOString().slice(0, 10);
 
 const field =
   "w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-red-500 bg-transparent";
@@ -178,26 +181,29 @@ const CalonWBProfilPage = () => {
             </div>
             <div>
               <label className={labelCls}>Tanggal Lahir</label>
-              <input
+              <DateField
                 required
-                type="date"
                 value={form.tanggalLahir}
-                onChange={set("tanggalLahir")}
-                className={field}
+                onChange={(iso) =>
+                  setForm((f) => ({ ...f, tanggalLahir: iso }))
+                }
+                max={TODAY_ISO}
               />
             </div>
             <div>
               <label className={labelCls}>Jenis Kelamin</label>
-              <select
+              <SelectField
                 required
                 value={form.jenisKelamin}
-                onChange={set("jenisKelamin")}
-                className={field}
-              >
-                <option value="">Pilih…</option>
-                <option value="L">Laki-laki</option>
-                <option value="P">Perempuan</option>
-              </select>
+                onChange={(val) =>
+                  setForm((f) => ({ ...f, jenisKelamin: val }))
+                }
+                placeholder="Pilih…"
+                options={[
+                  { value: "L", label: "Laki-laki" },
+                  { value: "P", label: "Perempuan" },
+                ]}
+              />
             </div>
             <div>
               <label className={labelCls}>Nomor HP / WhatsApp</label>
@@ -256,19 +262,13 @@ const CalonWBProfilPage = () => {
           </h3>
           <div className="max-w-xs">
             <label className={labelCls}>Pilihan Program</label>
-            <select
+            <SelectField
               required
               value={form.program}
-              onChange={set("program")}
-              className={field}
-            >
-              <option value="">Pilih Program…</option>
-              {PAKET_OPTIONS.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setForm((f) => ({ ...f, program: val }))}
+              placeholder="Pilih Program…"
+              options={PAKET_OPTIONS}
+            />
           </div>
         </div>
 

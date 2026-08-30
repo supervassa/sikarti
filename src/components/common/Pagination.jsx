@@ -1,4 +1,5 @@
 import React from "react";
+import SelectField from "./SelectField";
 
 const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
@@ -22,17 +23,12 @@ const Pagination = ({
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 border-t border-slate-200 bg-slate-50 text-sm text-slate-600">
       <div className="flex items-center gap-2">
         <span>Tampilkan</span>
-        <select
+        <SelectField
+          className="w-24"
           value={pageSize}
-          onChange={(e) => onPageSizeChange(Number(e.target.value))}
-          className="px-2 py-1.5 border border-slate-200 rounded-lg bg-white outline-none focus:border-red-500"
-        >
-          {pageSizeOptions.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
-            </option>
-          ))}
-        </select>
+          onChange={(val) => onPageSizeChange(Number(val))}
+          options={pageSizeOptions}
+        />
         <span>{labelItem} / halaman</span>
       </div>
 

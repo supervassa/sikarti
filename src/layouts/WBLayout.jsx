@@ -20,8 +20,25 @@ import {
 import { signOut } from "firebase/auth";
 import { auth } from "../config/firebase";
 import { useAuth } from "../context/AuthContext";
+import { useWBPhoto } from "../hooks/useWBPhoto";
 import LogoPKBM from "../assets/logo.png";
 import ThemeToggle from "../components/common/ThemeToggle";
+
+// Avatar WB: foto kalau ada, kalau tidak inisial nama.
+const WBAvatar = ({ photo, name, initials, className = "", initialsClassName = "" }) =>
+  photo ? (
+    <img
+      src={photo}
+      alt={name}
+      className={`rounded-full object-cover ${className}`}
+    />
+  ) : (
+    <div
+      className={`rounded-full font-bold flex items-center justify-center ${initialsClassName}`}
+    >
+      {initials}
+    </div>
+  );
 
 const WBLayout = () => {
   const { currentUser } = useAuth();
@@ -53,6 +70,7 @@ const WBLayout = () => {
   const isActive = (path) => location.pathname === path;
   const displayName = currentUser?.nama || "Warga Belajar";
   const initials = displayName.trim().charAt(0).toUpperCase() || "W";
+  const photo = useWBPhoto(currentUser?.uid);
 
   const renderNavItem = (item) => (
     <Link
@@ -139,9 +157,13 @@ const WBLayout = () => {
           >
             {!collapsed && (
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-9 h-9 shrink-0 rounded-full bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 font-bold flex items-center justify-center text-sm">
-                  {initials}
-                </div>
+                <WBAvatar
+                  photo={photo}
+                  name={displayName}
+                  initials={initials}
+                  className="w-9 h-9 shrink-0"
+                  initialsClassName="w-9 h-9 shrink-0 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm"
+                />
                 <div className="truncate">
                   <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
                     {displayName}
@@ -204,9 +226,13 @@ const WBLayout = () => {
             <span className="hidden sm:inline-block text-xs font-bold uppercase px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
               Warga Belajar
             </span>
-            <div className="w-9 h-9 rounded-full bg-red-600 text-white font-bold flex items-center justify-center text-sm">
-              {initials}
-            </div>
+            <WBAvatar
+              photo={photo}
+              name={displayName}
+              initials={initials}
+              className="w-9 h-9"
+              initialsClassName="w-9 h-9 bg-red-600 text-white text-sm"
+            />
           </div>
         </header>
 

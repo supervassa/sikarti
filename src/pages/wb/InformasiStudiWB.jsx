@@ -74,8 +74,13 @@ const InformasiStudiWB = () => {
             mapel.map((m) => (
               <div
                 key={m.id}
-                className="px-6 py-3 text-sm font-medium text-slate-700 dark:text-slate-200"
+                className="px-6 py-3 text-sm font-medium text-slate-700 dark:text-slate-200 flex items-center gap-2"
               >
+                {m.kode && (
+                  <span className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    {m.kode}
+                  </span>
+                )}
                 {m.nama}
               </div>
             ))

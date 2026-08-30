@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   collection,
   onSnapshot,
@@ -7,16 +7,52 @@ import {
   where,
 } from "firebase/firestore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faImage } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faImage, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { db } from "../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
-import { recordPresensi } from "../../services/adminServices";
+import DateField from "../../components/common/DateField";
+import SelectField from "../../components/common/SelectField";
+import { formatTanggal } from "../../utils/tanggal";
+import {
+  recordPresensi,
+  deletePresensi,
+  deleteSesiKelas,
+} from "../../services/adminServices";
 
 const STATUS_STYLE = {
   Hadir: "bg-emerald-50 text-emerald-700",
   Izin: "bg-blue-50 text-blue-700",
   Sakit: "bg-amber-50 text-amber-700",
   Alpa: "bg-rose-50 text-rose-700",
+};
+
+// mode hanya ada di presensi mandiri WB (self check-in). Dokumen yang dicatat admin
+// (Izin/Sakit/Alpa) atau auto-Alpa finalisasi pengajar tidak punya field ini.
+const MODE_BADGE = {
+  daring: {
+    label: "Daring",
+    cls: "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400",
+  },
+  luring: {
+    label: "Luring",
+    cls: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400",
+  },
+};
+
+const ModeBadge = ({ mode }) => {
+  const conf = MODE_BADGE[mode];
+  if (!conf) {
+    return (
+      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+        Manual
+      </span>
+    );
+  }
+  return (
+    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${conf.cls}`}>
+      {conf.label}
+    </span>
+  );
 };
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -75,6 +111,33 @@ const SessionStatus = ({ session, now }) => {
     <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
       Menunggu finalisasi
     </span>
+  );
+};
+
+// Ringkasan kehadiran WB pada satu sesi mengajar: "hadir / total" + rincian tidak hadir.
+// total = jumlah WB AKTIF di paket sesi tsb; stat = hasil agregasi dokumen presensi.
+const KehadiranWBCell = ({ stat, totalWB }) => {
+  const hadir = stat?.hadir || 0;
+  const izin = stat?.izin || 0;
+  const sakit = stat?.sakit || 0;
+  const alpa = stat?.alpa || 0;
+  const tidakHadir = totalWB > 0 ? Math.max(totalWB - hadir, 0) : izin + sakit + alpa;
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="inline-flex items-center gap-1.5 text-xs font-bold">
+        <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+          WB {hadir}/{totalWB > 0 ? totalWB : "?"}
+        </span>
+        {tidakHadir > 0 && (
+          <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400">
+            Tidak hadir {tidakHadir}
+          </span>
+        )}
+      </span>
+      <span className="text-[11px] text-slate-400 dark:text-slate-500">
+        Izin {izin} · Sakit {sakit} · Alpa {alpa}
+      </span>
+    </div>
   );
 };
 
@@ -141,6 +204,32 @@ const PresensiPage = () => {
     };
   }, []);
 
+  // Jumlah WB AKTIF per paket — jadi penyebut "hadir X dari Y" di rekap sesi mengajar.
+  const wbAktifPerPaket = useMemo(() => {
+    const acc = {};
+    wbList.forEach((w) => {
+      if (w.status !== "AKTIF") return;
+      if (!w.paket) return;
+      acc[w.paket] = (acc[w.paket] || 0) + 1;
+    });
+    return acc;
+  }, [wbList]);
+
+  // Rekap presensi WB per sesi kelas: { [sessionId]: { hadir, izin, sakit, alpa, total } }.
+  const presensiPerSesi = useMemo(() => {
+    const acc = {};
+    presensi.forEach((p) => {
+      if (!p.sessionId) return;
+      const bucket =
+        acc[p.sessionId] ||
+        (acc[p.sessionId] = { hadir: 0, izin: 0, sakit: 0, alpa: 0, total: 0 });
+      const key = String(p.status || "").toLowerCase();
+      if (key in bucket) bucket[key] += 1;
+      bucket.total += 1;
+    });
+    return acc;
+  }, [presensi]);
+
   const handleWBChange = (wbId) => {
     const wb = wbList.find((item) => item.id === wbId);
     setForm({ ...form, wbId, nama: wb?.nama || "" });
@@ -154,6 +243,42 @@ const PresensiPage = () => {
       setIsModalOpen(false);
     } catch (err) {
       alert("Gagal mencatat presensi: " + err.message);
+    }
+  };
+
+  const handleDeletePresensi = async (p) => {
+    if (
+      !confirm(
+        `Hapus rekap kehadiran ${p.nama || "WB"} (${p.tanggal || "-"})?`,
+      )
+    )
+      return;
+    try {
+      await deletePresensi(p.id, currentUser, {
+        nama: p.nama,
+        tanggal: p.tanggal,
+        status: p.status,
+      });
+    } catch (err) {
+      alert("Gagal menghapus rekap kehadiran: " + err.message);
+    }
+  };
+
+  const handleDeleteSesi = async (s) => {
+    if (
+      !confirm(
+        `Hapus sesi mengajar ${s.pengajarNama || "pengajar"} (${s.tanggal || "-"})?`,
+      )
+    )
+      return;
+    try {
+      await deleteSesiKelas(s.id, currentUser, {
+        pengajarNama: s.pengajarNama,
+        tanggal: s.tanggal,
+        namaMapel: s.namaMapel,
+      });
+    } catch (err) {
+      alert("Gagal menghapus sesi mengajar: " + err.message);
     }
   };
 
@@ -209,19 +334,21 @@ const PresensiPage = () => {
                   <th className="px-4 py-4">Nama WB</th>
                   <th className="px-4 py-4">Mapel</th>
                   <th className="px-4 py-4">Status</th>
+                  <th className="px-4 py-4">Metode</th>
                   <th className="px-4 py-4">Lokasi</th>
+                  <th className="px-4 py-4 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {loading ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-8 text-slate-400">
+                    <td colSpan="8" className="text-center py-8 text-slate-400">
                       Memuat data kehadiran...
                     </td>
                   </tr>
                 ) : presensi.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-8 text-slate-400">
+                    <td colSpan="8" className="text-center py-8 text-slate-400">
                       Belum ada catatan kehadiran.
                     </td>
                   </tr>
@@ -235,7 +362,7 @@ const PresensiPage = () => {
                         <PhotoThumb src={p.fotoBase64} onOpen={setPhotoModal} />
                       </td>
                       <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
-                        {p.tanggal}
+                        {formatTanggal(p.tanggal)}
                       </td>
                       <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100">
                         {p.nama}
@@ -251,7 +378,20 @@ const PresensiPage = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3">
+                        <ModeBadge mode={p.mode} />
+                      </td>
+                      <td className="px-4 py-3">
                         <MapsLink lokasi={p.lokasi} />
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePresensi(p)}
+                          title="Hapus rekap kehadiran"
+                          className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
+                        >
+                          <FontAwesomeIcon icon={faTrash} className="w-3.5 h-3.5" />
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -273,13 +413,15 @@ const PresensiPage = () => {
                   <th className="px-4 py-4">Mulai Mengajar</th>
                   <th className="px-4 py-4">Durasi</th>
                   <th className="px-4 py-4">Status</th>
+                  <th className="px-4 py-4">Kehadiran WB</th>
                   <th className="px-4 py-4">Lokasi</th>
+                  <th className="px-4 py-4 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {sesiKelas.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="text-center py-8 text-slate-400">
+                    <td colSpan="10" className="text-center py-8 text-slate-400">
                       Belum ada sesi mengajar tercatat.
                     </td>
                   </tr>
@@ -293,7 +435,7 @@ const PresensiPage = () => {
                         <PhotoThumb src={s.fotoBase64} onOpen={setPhotoModal} />
                       </td>
                       <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
-                        {s.tanggal}
+                        {formatTanggal(s.tanggal)}
                       </td>
                       <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100">
                         {s.pengajarNama}
@@ -311,7 +453,23 @@ const PresensiPage = () => {
                         <SessionStatus session={s} now={now} />
                       </td>
                       <td className="px-4 py-3">
+                        <KehadiranWBCell
+                          stat={presensiPerSesi[s.id]}
+                          totalWB={wbAktifPerPaket[s.paket] || 0}
+                        />
+                      </td>
+                      <td className="px-4 py-3">
                         <MapsLink lokasi={s.lokasi} />
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSesi(s)}
+                          title="Hapus sesi mengajar"
+                          className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
+                        >
+                          <FontAwesomeIcon icon={faTrash} className="w-3.5 h-3.5" />
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -337,49 +495,34 @@ const PresensiPage = () => {
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Warga Belajar
                 </label>
-                <select
+                <SelectField
                   required
                   value={form.wbId}
-                  onChange={(e) => handleWBChange(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500 bg-transparent"
-                >
-                  <option value="">Pilih WB...</option>
-                  {wbList.map((wb) => (
-                    <option key={wb.id} value={wb.id}>
-                      {wb.nama}
-                    </option>
-                  ))}
-                </select>
+                  onChange={handleWBChange}
+                  placeholder="Pilih WB..."
+                  options={wbList.map((wb) => ({ value: wb.id, label: wb.nama }))}
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Tanggal
                 </label>
-                <input
+                <DateField
                   required
-                  type="date"
                   value={form.tanggal}
-                  onChange={(e) =>
-                    setForm({ ...form, tanggal: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500 bg-transparent"
+                  onChange={(iso) => setForm({ ...form, tanggal: iso })}
+                  clearable={false}
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Status
                 </label>
-                <select
+                <SelectField
                   value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500 bg-transparent"
-                >
-                  {Object.keys(STATUS_STYLE).map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setForm({ ...form, status: val })}
+                  options={Object.keys(STATUS_STYLE)}
+                />
               </div>
               <div className="flex justify-end space-x-2 pt-3">
                 <button

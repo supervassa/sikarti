@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
+import { formatTanggal } from "../../utils/tanggal";
 
 const formatRupiah = (value) =>
   new Intl.NumberFormat("id-ID", {
@@ -96,7 +97,7 @@ const TagihanWB = () => {
                       {formatRupiah(t.jumlah)}
                     </td>
                     <td className="px-4 py-4 text-slate-500 dark:text-slate-400">
-                      {t.jatuhTempo}
+                      {formatTanggal(t.jatuhTempo)}
                     </td>
                     <td className="px-4 py-4">
                       <span

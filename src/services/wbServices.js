@@ -2,15 +2,23 @@ import { db } from "../config/firebase";
 import {
   addDoc,
   collection,
+  deleteDoc,
+  deleteField,
   doc,
   getDocs,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
 } from "firebase/firestore";
-import { createAuditLog } from "./adminServices";
+import {
+  buildWbProfileFields,
+  createAuditLog,
+  WB_OPTIONAL_FIELDS,
+} from "./adminServices";
 import { isInsidePresensiArea } from "../utils/presensiLokasi";
+import { isValidNIK } from "../utils/wbLogin";
 
 export const todayISO = () => new Date().toISOString().slice(0, 10);
 
@@ -66,4 +74,71 @@ export const updateOwnContact = async (uid, noHp, currentUser) => {
     updatedAt: serverTimestamp(),
   });
   await createAuditLog(currentUser, "UPDATE", "PROFIL_WB", uid, { noHp });
+};
+
+// WB menyunting profilnya sendiri (halaman Profil): biodata + paket + tahunAngkatan + nik.
+// Status keanggotaan, email login, nomorInduk TIDAK ikut (dikunci di firestore.rules).
+// `prevWb` = dokumen WB sebelum diedit — untuk pelihara indeks unik wbNik/{nik}.
+export const updateOwnWBProfile = async (uid, form, currentUser, prevWb = {}) => {
+  const prevNik = String(prevWb.nik || "").trim();
+  const newNik = String(form.nik || "").trim();
+  if (newNik && !isValidNIK(newNik)) {
+    throw new Error("NIK harus 16 digit angka.");
+  }
+
+  // Pelihara indeks unik wbNik/{nik}. create-if-absent: kalau NIK sudah dipakai
+  // WB lain, setDoc gagal -> lempar pesan yang jelas.
+  if (newNik !== prevNik) {
+    if (newNik) {
+      try {
+        await setDoc(doc(db, "wbNik", newNik), {
+          uid,
+          nik: newNik,
+          createdAt: serverTimestamp(),
+        });
+      } catch (err) {
+        throw new Error("NIK sudah terdaftar atas nama Warga Belajar lain.", {
+          cause: err,
+        });
+      }
+    }
+    if (prevNik) {
+      await deleteDoc(doc(db, "wbNik", prevNik)).catch(() => {});
+    }
+  }
+
+  const optional = buildWbProfileFields(form); // biodata terisi + nisn (marker bila kosong)
+  const payload = {
+    nama: String(form.nama || "").trim(),
+    paket: form.paket,
+    tahunAngkatan: String(form.tahunAngkatan || "").trim() || deleteField(),
+    updatedAt: serverTimestamp(),
+    ...optional,
+  };
+  payload.nik = newNik || deleteField();
+  // Field opsional yang dikosongkan -> hapus dari dokumen.
+  for (const key of WB_OPTIONAL_FIELDS) {
+    if (!(key in optional)) payload[key] = deleteField();
+  }
+
+  await updateDoc(doc(db, "users", uid), payload);
+  await createAuditLog(currentUser, "UPDATE", "PROFIL_WB", uid, {
+    nama: payload.nama,
+  });
+};
+
+// Foto WB (wbPhotos/{uid}, base64). WB kelola fotonya sendiri di halaman Profil.
+export const setOwnWBPhoto = async (uid, base64, currentUser) => {
+  await setDoc(doc(db, "wbPhotos", uid), {
+    base64,
+    updatedAt: serverTimestamp(),
+  });
+  await createAuditLog(currentUser, "UPDATE", "PROFIL_WB", uid, { event: "FOTO" });
+};
+
+export const deleteOwnWBPhoto = async (uid, currentUser) => {
+  await deleteDoc(doc(db, "wbPhotos", uid));
+  await createAuditLog(currentUser, "UPDATE", "PROFIL_WB", uid, {
+    event: "FOTO_HAPUS",
+  });
 };

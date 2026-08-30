@@ -22,6 +22,7 @@ import {
   updateBerita,
   deleteBerita,
 } from "../../services/adminServices";
+import SelectField from "../../components/common/SelectField";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 const MAX_UPLOAD_BYTES = 650 * 1024; // ~650KB mentah, aman untuk batas dokumen Firestore setelah di-base64
@@ -239,20 +240,15 @@ const BeritaManagementPage = () => {
         </div>
         <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
           <span>Tampilkan</span>
-          <select
+          <SelectField
+            className="w-24"
             value={pageSize}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value));
+            onChange={(val) => {
+              setPageSize(Number(val));
               setPage(1);
             }}
-            className="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg px-2 py-1.5 text-sm text-slate-700 dark:text-slate-200 outline-none"
-          >
-            {PAGE_SIZE_OPTIONS.map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
+            options={PAGE_SIZE_OPTIONS}
+          />
           <span>data</span>
         </div>
       </div>

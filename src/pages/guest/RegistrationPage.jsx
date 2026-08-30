@@ -2,10 +2,14 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../../components/guest/Navbar";
 import Footer from "../../components/guest/Footer";
+import DateField from "../../components/common/DateField";
+import SelectField from "../../components/common/SelectField";
 import {
   REGISTRATION_DEADLINE_HOURS,
   submitRegistration,
 } from "../../services/registrationServices";
+
+const TODAY_ISO = new Date().toISOString().slice(0, 10);
 
 const EMPTY = {
   namaLengkap: "",
@@ -161,30 +165,32 @@ const RegistrationPage = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Tanggal Lahir *
                     </label>
-                    <input
-                      type="date"
+                    <DateField
                       name="tanggalLahir"
                       required
                       value={formData.tanggalLahir}
-                      onChange={handleChange}
-                      className={inputCls}
+                      onChange={(iso) =>
+                        setFormData((f) => ({ ...f, tanggalLahir: iso }))
+                      }
+                      max={TODAY_ISO}
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Jenis Kelamin *
                     </label>
-                    <select
+                    <SelectField
                       name="jenisKelamin"
                       required
                       value={formData.jenisKelamin}
-                      onChange={handleChange}
-                      className={`${inputCls} bg-white`}
-                    >
-                      <option value="">Pilih...</option>
-                      <option value="L">Laki-laki</option>
-                      <option value="P">Perempuan</option>
-                    </select>
+                      onChange={(val) =>
+                        setFormData((f) => ({ ...f, jenisKelamin: val }))
+                      }
+                      options={[
+                        { value: "L", label: "Laki-laki" },
+                        { value: "P", label: "Perempuan" },
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">

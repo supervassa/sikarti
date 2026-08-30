@@ -10,6 +10,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { db } from "../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
+import DateField from "../../components/common/DateField";
+import SelectField from "../../components/common/SelectField";
+import { formatTanggal } from "../../utils/tanggal";
 import {
   createTagihan,
   updateTagihanStatus,
@@ -159,7 +162,7 @@ const KeuanganPage = () => {
                       {formatRupiah(t.jumlah)}
                     </td>
                     <td className="px-4 py-4 text-xs text-slate-500 dark:text-slate-400">
-                      {t.jatuhTempo || "-"}
+                      {formatTanggal(t.jatuhTempo)}
                     </td>
                     <td className="px-4 py-4">
                       <span
@@ -198,19 +201,13 @@ const KeuanganPage = () => {
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Warga Belajar
                 </label>
-                <select
+                <SelectField
                   required
                   value={form.wbId}
-                  onChange={(e) => handleWBChange(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500 bg-transparent"
-                >
-                  <option value="">Pilih WB...</option>
-                  {wbList.map((wb) => (
-                    <option key={wb.id} value={wb.id}>
-                      {wb.nama}
-                    </option>
-                  ))}
-                </select>
+                  onChange={handleWBChange}
+                  placeholder="Pilih WB..."
+                  options={wbList.map((wb) => ({ value: wb.id, label: wb.nama }))}
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
@@ -243,14 +240,11 @@ const KeuanganPage = () => {
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Jatuh Tempo
                 </label>
-                <input
+                <DateField
                   required
-                  type="date"
                   value={form.jatuhTempo}
-                  onChange={(e) =>
-                    setForm({ ...form, jatuhTempo: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500 bg-transparent"
+                  onChange={(iso) => setForm({ ...form, jatuhTempo: iso })}
+                  clearable={false}
                 />
               </div>
               <div className="flex justify-end space-x-2 pt-3">

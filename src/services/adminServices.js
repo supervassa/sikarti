@@ -4,11 +4,14 @@ import {
   doc,
   addDoc,
   getDoc,
+  getDocs,
   setDoc,
   updateDoc,
   deleteDoc,
   deleteField,
   serverTimestamp,
+  query,
+  where,
 } from "firebase/firestore";
 import {
   createUserWithEmailAndPassword,
@@ -154,7 +157,7 @@ const deleteUserRecord = async (user, actor, moduleName) => {
 
 // Field opsional WB yang, bila diisi, ikut disimpan di dokumen users/{uid}
 // (harus sinkron dengan isValidWBProfileShape di firestore.rules).
-const WB_OPTIONAL_FIELDS = [
+export const WB_OPTIONAL_FIELDS = [
   "noHp",
   "emailKontak",
   "jenisKelamin",
@@ -444,25 +447,51 @@ export const deletePengajar = (pengajar, actor) =>
   deleteUserRecord(pengajar, actor, "MANAJEMEN_PENGAJAR");
 
 // --- 3. MANAJEMEN MATA PELAJARAN ---
+// Kode mapel dibuat otomatis: huruf paket + nomor urut 2 digit per paket (A01, B01, C01...).
+const PAKET_KODE_PREFIX = { "Paket A": "A", "Paket B": "B", "Paket C": "C" };
+
+const generateKodeMapel = async (paket) => {
+  const prefix = PAKET_KODE_PREFIX[paket] || "X";
+  const snap = await getDocs(
+    query(collection(db, "subjects"), where("paket", "==", paket)),
+  );
+  let maxUrut = 0;
+  snap.forEach((d) => {
+    const match = String(d.data().kode || "").match(/^[A-Z](\d+)$/);
+    if (match) maxUrut = Math.max(maxUrut, parseInt(match[1], 10));
+  });
+  return `${prefix}${String(maxUrut + 1).padStart(2, "0")}`;
+};
+
 export const createMapel = async (dataMapel, actor) => {
+  const kode = await generateKodeMapel(dataMapel.paket);
   const docRef = await addDoc(collection(db, "subjects"), {
     ...dataMapel,
+    kode,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
   await createAuditLog(actor, "CREATE", "MATA_PELAJARAN", docRef.id, {
     namaMapel: dataMapel.nama,
+    kode,
   });
   return docRef.id;
 };
 
 export const updateMapel = async (mapelId, dataMapel, actor) => {
-  await updateDoc(doc(db, "subjects", mapelId), {
-    ...dataMapel,
-    updatedAt: serverTimestamp(),
-  });
+  const ref = doc(db, "subjects", mapelId);
+  const prev = (await getDoc(ref)).data() || {};
+  const payload = { ...dataMapel, updatedAt: serverTimestamp() };
+  // Buatkan kode bila: mapel lama belum punya, atau paket dipindah ke paket lain
+  // sehingga prefix kode tidak lagi cocok.
+  const prefix = PAKET_KODE_PREFIX[dataMapel.paket] || "X";
+  if (!prev.kode || !String(prev.kode).startsWith(prefix)) {
+    payload.kode = await generateKodeMapel(dataMapel.paket);
+  }
+  await updateDoc(ref, payload);
   await createAuditLog(actor, "UPDATE", "MATA_PELAJARAN", mapelId, {
     namaMapel: dataMapel.nama,
+    kode: payload.kode || prev.kode || "",
   });
 };
 
@@ -658,6 +687,16 @@ export const recordPresensi = async (dataPresensi, actor) => {
     status: dataPresensi.status,
   });
   return docRef.id;
+};
+
+export const deletePresensi = async (presensiId, actor, meta = {}) => {
+  await deleteDoc(doc(db, "presensi", presensiId));
+  await createAuditLog(actor, "DELETE", "PRESENSI", presensiId, meta);
+};
+
+export const deleteSesiKelas = async (sessionId, actor, meta = {}) => {
+  await deleteDoc(doc(db, "classSessions", sessionId));
+  await createAuditLog(actor, "DELETE", "CLASS_SESSION", sessionId, meta);
 };
 
 // --- 8. INFORMASI TAGIHAN ---

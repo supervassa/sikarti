@@ -10,6 +10,7 @@ import {
   parseWorkbook,
   runImport,
 } from "../../services/wbImport";
+import SelectField from "../common/SelectField";
 
 const FLAG_META = {
   "kemungkinan-berhenti": {
@@ -249,17 +250,12 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
                   <label className="block text-xs font-semibold text-slate-600 mb-1">
                     Sheet
                   </label>
-                  <select
+                  <SelectField
+                    className="w-48"
                     value={sheetName}
-                    onChange={(e) => changeSheet(e.target.value)}
-                    className="px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-                  >
-                    {sheetNames.map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={changeSheet}
+                    options={sheetNames}
+                  />
                 </div>
               )}
               <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-bold">
