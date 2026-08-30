@@ -54,3 +54,24 @@
     display: none !important;
   }
 }
+
+/* Cetak daftar hasil impor WB: hanya tabelnya. */
+@media print {
+  body:has(#wb-import-print) * {
+    visibility: hidden;
+  }
+  #wb-import-print,
+  #wb-import-print * {
+    visibility: visible;
+  }
+  #wb-import-print {
+    position: absolute;
+    inset: 0;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  #wb-import-print > div {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}

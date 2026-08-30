@@ -1,24 +1,18 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import { db } from "../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
-import {
-  createWB,
-  updateWB,
-  normalizeWBStatus,
-  setWBLifecycleStatus,
-  deleteWB,
-  resetUserPassword,
-  getWBPassword,
-  resetWBPassword,
-} from "../../services/adminServices";
+import { createWB, normalizeWBStatus } from "../../services/adminServices";
 import {
   isValidNomorInduk,
   suggestNomorInduk,
 } from "../../utils/wbLogin";
 import Pagination from "../../components/common/Pagination";
+import WBImportModal from "../../components/admin/WBImportModal";
+import { buildCredentialsCsv, downloadCsv } from "../../services/wbImport";
 
 const PAKET_TABS = ["Semua", "Paket A", "Paket B", "Paket C"];
 
@@ -55,29 +49,9 @@ const WBManagementPage = () => {
   const [nomorIndukTouched, setNomorIndukTouched] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Kartu kredensial hasil "Tambah WB" atau "Buat Password Baru".
+  // Kartu kredensial hasil "Tambah WB".
   const [credential, setCredential] = useState(null);
   const [copied, setCopied] = useState(false);
-
-  const [detailWB, setDetailWB] = useState(null);
-  const [editForm, setEditForm] = useState({
-    nama: "",
-    emailKontak: "",
-    email: "",
-    paket: "Paket C",
-    tahunAngkatan: DEFAULT_TAHUN_ANGKATAN,
-    nik: "",
-    noHp: "",
-  });
-  const [statusForm, setStatusForm] = useState({
-    status: "AKTIF",
-    tahunLulus: DEFAULT_TAHUN_ANGKATAN,
-    terakhirAktif: DEFAULT_TAHUN_ANGKATAN,
-  });
-  const [savingDetail, setSavingDetail] = useState(false);
-  const [savingStatus, setSavingStatus] = useState(false);
-  const [viewedPassword, setViewedPassword] = useState(null);
-  const [pwdBusy, setPwdBusy] = useState(false);
 
   const [searchNama, setSearchNama] = useState("");
   const [filterPaket, setFilterPaket] = useState("Semua");
@@ -85,6 +59,24 @@ const WBManagementPage = () => {
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  const [importOpen, setImportOpen] = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
+
+  const handleExportCsv = async () => {
+    setExportBusy(true);
+    try {
+      const csv = await buildCredentialsCsv(listWB);
+      downloadCsv(
+        csv,
+        `kredensial-wb-${new Date().toISOString().slice(0, 10)}.csv`,
+      );
+    } catch (err) {
+      alert("Gagal menyusun CSV: " + err.message);
+    } finally {
+      setExportBusy(false);
+    }
+  };
 
   useEffect(() => {
     const q = query(collection(db, "users"), where("kd_role", "==", 22));
@@ -97,7 +89,7 @@ const WBManagementPage = () => {
 
   const tahunOptionsFromData = useMemo(() => {
     const fromData = listWB.map((wb) => wb.tahunAngkatan).filter(Boolean);
-    return Array.from(new Set([...TAHUN_ANGKATAN_OPTIONS, ...fromData])).sort();
+    return Array.from(new Set(fromData)).sort();
   }, [listWB]);
 
   const filteredWB = useMemo(() => {
@@ -187,137 +179,6 @@ const WBManagementPage = () => {
     }
   };
 
-  const openDetail = (wb) => {
-    setDetailWB(wb);
-    setViewedPassword(null);
-    setEditForm({
-      nama: wb.nama || "",
-      emailKontak: wb.emailKontak || "",
-      email: wb.email || "",
-      paket: wb.paket || "Paket C",
-      tahunAngkatan: wb.tahunAngkatan || DEFAULT_TAHUN_ANGKATAN,
-      nik: wb.nik || "",
-      noHp: wb.noHp || "",
-    });
-    setStatusForm({
-      status: normalizeWBStatus(wb.status),
-      tahunLulus: wb.tahunLulus || DEFAULT_TAHUN_ANGKATAN,
-      terakhirAktif: wb.terakhirAktif || DEFAULT_TAHUN_ANGKATAN,
-    });
-  };
-
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    setSavingDetail(true);
-    try {
-      const payload = {
-        nama: editForm.nama,
-        paket: editForm.paket,
-        tahunAngkatan: editForm.tahunAngkatan,
-        nik: editForm.nik,
-        noHp: editForm.noHp,
-      };
-      if (detailWB.nomorInduk) {
-        // Login pakai Nomor Induk: email (synthetic) & nomorInduk tak diubah lewat form ini,
-        // cukup email kontak. Field lain yang tak dikirim tetap seperti sebelumnya (merge).
-        payload.emailKontak = editForm.emailKontak.trim().toLowerCase();
-      } else {
-        // WB lama: email = kredensial login, tetap bisa diedit seperti sebelumnya.
-        payload.email = editForm.email;
-      }
-      await updateWB(detailWB.id, payload, currentUser, detailWB.status);
-      setDetailWB(null);
-    } catch (err) {
-      alert("Gagal memperbarui data WB: " + err.message);
-    } finally {
-      setSavingDetail(false);
-    }
-  };
-
-  const handleStatusSave = async () => {
-    setSavingStatus(true);
-    try {
-      await setWBLifecycleStatus(
-        { id: detailWB.id, ...statusForm },
-        currentUser,
-      );
-      setDetailWB({ ...detailWB, ...statusForm });
-    } catch (err) {
-      alert("Gagal mengubah status WB: " + err.message);
-    } finally {
-      setSavingStatus(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (
-      !confirm(
-        `Hapus data ${detailWB.nama} dari sistem? Akses WB ini ke aplikasi akan langsung dicabut.`,
-      )
-    )
-      return;
-    setSavingDetail(true);
-    try {
-      await deleteWB(detailWB, currentUser);
-      setDetailWB(null);
-    } catch (err) {
-      alert("Gagal menghapus data WB: " + err.message);
-    } finally {
-      setSavingDetail(false);
-    }
-  };
-
-  // WB lama (punya email asli, tanpa Nomor Induk): kirim tautan reset lewat email.
-  const handleEmailReset = async () => {
-    if (!confirm(`Kirim email reset password ke ${detailWB.email}?`)) return;
-    setPwdBusy(true);
-    try {
-      await resetUserPassword(detailWB, currentUser, "MANAJEMEN_WB");
-      alert("Email reset password telah dikirim ke " + detailWB.email);
-    } catch (err) {
-      alert("Gagal mengirim email reset: " + err.message);
-    } finally {
-      setPwdBusy(false);
-    }
-  };
-
-  const handleViewPassword = async () => {
-    setPwdBusy(true);
-    try {
-      const pwd = await getWBPassword(detailWB);
-      setViewedPassword(pwd || "(tidak tersimpan)");
-    } catch (err) {
-      alert("Gagal membaca password: " + err.message);
-    } finally {
-      setPwdBusy(false);
-    }
-  };
-
-  const handleGeneratePassword = async () => {
-    if (
-      !confirm(
-        `Buat password baru untuk ${detailWB.nama}? Password lama akan langsung tidak berlaku.`,
-      )
-    )
-      return;
-    setPwdBusy(true);
-    try {
-      const newPwd = await resetWBPassword(detailWB, currentUser);
-      setViewedPassword(null);
-      setCopied(false);
-      setCredential({
-        title: "Password baru dibuat",
-        nama: detailWB.nama,
-        nomorInduk: detailWB.nomorInduk,
-        password: newPwd,
-      });
-    } catch (err) {
-      alert("Gagal membuat password baru: " + err.message);
-    } finally {
-      setPwdBusy(false);
-    }
-  };
-
   const copyCredential = async () => {
     if (!credential) return;
     const text = `PKBM KARTINI\nNama: ${credential.nama}\nNomor Induk: ${credential.nomorInduk}\nPassword: ${credential.password}`;
@@ -365,14 +226,36 @@ const WBManagementPage = () => {
             Kelola data siswa Paket A, Paket B, dan Paket C PKBM KARTINI.
           </p>
         </div>
-        <button
-          onClick={openAddModal}
-          className="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2.5 rounded-xl text-sm shadow transition-all flex items-center justify-center space-x-2"
-        >
-          <FontAwesomeIcon icon={faPlus} className="w-3.5 h-3.5" />
-          <span>Tambah WB Baru</span>
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={handleExportCsv}
+            disabled={exportBusy || listWB.length === 0}
+            className="border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all disabled:opacity-50"
+          >
+            {exportBusy ? "Menyiapkan…" : "Ekspor Kredensial (CSV)"}
+          </button>
+          <button
+            onClick={() => setImportOpen(true)}
+            className="border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all"
+          >
+            Impor dari Excel
+          </button>
+          <button
+            onClick={openAddModal}
+            className="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2.5 rounded-xl text-sm shadow transition-all flex items-center justify-center space-x-2"
+          >
+            <FontAwesomeIcon icon={faPlus} className="w-3.5 h-3.5" />
+            <span>Tambah WB Baru</span>
+          </button>
+        </div>
       </div>
+
+      <WBImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        listWB={listWB}
+        actor={currentUser}
+      />
 
       {/* Tab Program Paket */}
       <div className="flex gap-1 border-b border-slate-200 overflow-x-auto">
@@ -493,12 +376,12 @@ const WBManagementPage = () => {
                     </td>
                     <td className="px-4 py-4">{renderStatusBadge(wb)}</td>
                     <td className="px-6 py-4">
-                      <button
-                        onClick={() => openDetail(wb)}
-                        className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                      <Link
+                        to={`/admin/wb/${wb.id}`}
+                        className="inline-block px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
                       >
                         Detail
-                      </button>
+                      </Link>
                     </td>
                   </tr>
                 ))
@@ -717,322 +600,6 @@ const WBManagementPage = () => {
                 className="flex-1 px-3 py-2 text-sm bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700"
               >
                 Selesai
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Detail / Edit WB */}
-      {detailWB && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-900">
-                Detail Warga Belajar
-              </h2>
-              <span
-                className={`px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_META[normalizeWBStatus(detailWB.status)].className}`}
-              >
-                {STATUS_META[normalizeWBStatus(detailWB.status)].label}
-              </span>
-            </div>
-
-            <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wide text-slate-400">
-                Nomor Induk (login WB)
-              </p>
-              {detailWB.nomorInduk ? (
-                <p className="font-mono text-base font-bold text-slate-800">
-                  {detailWB.nomorInduk}
-                </p>
-              ) : (
-                <>
-                  <p className="text-sm font-semibold text-slate-500">
-                    Belum ada
-                  </p>
-                  <p className="mt-1 text-[11px] text-amber-600">
-                    WB ini dibuat dengan email, jadi login lewat tab
-                    &ldquo;Pengajar &amp; Staf&rdquo; memakai email. Untuk pindah
-                    ke login Nomor Induk: hapus lalu tambahkan ulang WB ini.
-                  </p>
-                </>
-              )}
-            </div>
-
-            <form onSubmit={handleUpdate} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
-                  Nama Lengkap
-                </label>
-                <input
-                  required
-                  type="text"
-                  value={editForm.nama}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, nama: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-                />
-              </div>
-              {detailWB.nomorInduk ? (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Email Kontak (opsional)
-                  </label>
-                  <input
-                    type="email"
-                    value={editForm.emailKontak}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, emailKontak: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-                    placeholder="Untuk pemberitahuan, bukan untuk login"
-                  />
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Email
-                  </label>
-                  <input
-                    required
-                    type="email"
-                    value={editForm.email}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, email: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-                  />
-                  <p className="mt-1 text-[11px] text-amber-600">
-                    Ini hanya mengubah email kontak di sistem. Email login
-                    (Firebase Auth) tetap yang lama sampai WB reset password
-                    sendiri.
-                  </p>
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Program Paket
-                  </label>
-                  <select
-                    value={editForm.paket}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, paket: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-                  >
-                    <option value="Paket A">Paket A (Setara SD)</option>
-                    <option value="Paket B">Paket B (Setara SMP)</option>
-                    <option value="Paket C">Paket C (Setara SMA)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Tahun Angkatan
-                  </label>
-                  <select
-                    value={editForm.tahunAngkatan}
-                    onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
-                        tahunAngkatan: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-                  >
-                    {tahunOptionsFromData.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
-                  NIK
-                </label>
-                <input
-                  type="text"
-                  value={editForm.nik}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, nik: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
-                  Nomor HP
-                </label>
-                <input
-                  type="tel"
-                  value={editForm.noHp}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, noHp: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-                />
-              </div>
-              <div className="flex justify-end space-x-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setDetailWB(null)}
-                  className="px-4 py-2 text-sm text-slate-600 font-semibold"
-                >
-                  Tutup
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingDetail}
-                  className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 disabled:opacity-60"
-                >
-                  {savingDetail ? "Menyimpan…" : "Simpan Data Diri"}
-                </button>
-              </div>
-            </form>
-
-            {/* Kelola Password */}
-            <div className="pt-3 border-t border-slate-100 space-y-2">
-              <label className="block text-xs font-semibold text-slate-600">
-                Kelola Password
-              </label>
-              {detailWB.nomorInduk ? (
-                <>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      disabled={pwdBusy}
-                      onClick={handleViewPassword}
-                      className="flex-1 px-4 py-2 text-sm font-bold text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-60"
-                    >
-                      Lihat Password
-                    </button>
-                    <button
-                      type="button"
-                      disabled={pwdBusy}
-                      onClick={handleGeneratePassword}
-                      className="flex-1 px-4 py-2 text-sm font-bold text-white bg-slate-800 rounded-lg hover:bg-slate-900 disabled:opacity-60"
-                    >
-                      Buat Password Baru
-                    </button>
-                  </div>
-                  {viewedPassword && (
-                    <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 flex items-center justify-between">
-                      <span className="font-mono text-base font-bold text-slate-800">
-                        {viewedPassword}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard
-                            ?.writeText(viewedPassword)
-                            .catch(() => {});
-                        }}
-                        className="text-xs font-semibold text-red-600 hover:text-red-500"
-                      >
-                        Salin
-                      </button>
-                    </div>
-                  )}
-                  <p className="text-[11px] text-slate-500">
-                    "Lihat Password" untuk dibacakan ke WB yang lupa. "Buat
-                    Password Baru" bila password harus diganti.
-                  </p>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  disabled={pwdBusy}
-                  onClick={handleEmailReset}
-                  className="w-full px-4 py-2 text-sm font-bold text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-60"
-                >
-                  Kirim Email Reset Password
-                </button>
-              )}
-            </div>
-
-            <div className="pt-3 border-t border-slate-100 space-y-3">
-              <label className="block text-xs font-semibold text-slate-600">
-                Status Keanggotaan
-              </label>
-              <select
-                value={statusForm.status}
-                onChange={(e) =>
-                  setStatusForm({ ...statusForm, status: e.target.value })
-                }
-                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-              >
-                <option value="AKTIF">Aktif</option>
-                <option value="NONAKTIF">Nonaktif</option>
-                <option value="LULUS">Lulus</option>
-              </select>
-              {statusForm.status === "LULUS" && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Tahun Lulus
-                  </label>
-                  <select
-                    value={statusForm.tahunLulus}
-                    onChange={(e) =>
-                      setStatusForm({
-                        ...statusForm,
-                        tahunLulus: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-                  >
-                    {tahunOptionsFromData.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {statusForm.status === "NONAKTIF" && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Terakhir Aktif
-                  </label>
-                  <select
-                    value={statusForm.terakhirAktif}
-                    onChange={(e) =>
-                      setStatusForm({
-                        ...statusForm,
-                        terakhirAktif: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
-                  >
-                    {tahunOptionsFromData.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <button
-                type="button"
-                disabled={savingStatus}
-                onClick={handleStatusSave}
-                className="w-full px-4 py-2 text-sm bg-slate-800 text-white rounded-lg font-semibold hover:bg-slate-900 disabled:opacity-60"
-              >
-                {savingStatus ? "Menyimpan…" : "Update Status"}
-              </button>
-            </div>
-
-            <div className="pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                disabled={savingDetail}
-                onClick={handleDelete}
-                className="w-full px-4 py-2 text-sm font-bold text-rose-700 bg-rose-50 rounded-lg hover:bg-rose-100 disabled:opacity-60"
-              >
-                Hapus Data WB
               </button>
             </div>
           </div>

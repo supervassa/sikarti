@@ -24,6 +24,7 @@ import AdminManagementPage from "../pages/superadmin/AdminManagementPage";
 // Pages - Admin & Superadmin Joint Features (Tahap 5)
 import DashboardOverviewPage from "../pages/admin/DashboardOverviewPage";
 import WBManagementPage from "../pages/admin/WBManagementPage";
+import WBDetailPage from "../pages/admin/WBDetailPage";
 import PengajarManagementPage from "../pages/admin/PengajarManagementPage";
 import MapelPage from "../pages/admin/MapelPage";
 import JadwalPage from "../pages/admin/JadwalPage";
@@ -83,6 +84,7 @@ const AppRoutes = () => {
       >
         <Route path="/admin/dashboard" element={<DashboardOverviewPage />} />
         <Route path="/admin/wb" element={<WBManagementPage />} />
+        <Route path="/admin/wb/:wbId" element={<WBDetailPage />} />
         <Route path="/admin/pengajar" element={<PengajarManagementPage />} />
         <Route path="/admin/mapel" element={<MapelPage />} />
         <Route path="/admin/jadwal" element={<JadwalPage />} />

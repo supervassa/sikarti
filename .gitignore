@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Kunci service account Firebase Admin (JANGAN commit)
+serviceAccountKey.json
+scripts/serviceAccountKey.json
+*serviceAccount*.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
