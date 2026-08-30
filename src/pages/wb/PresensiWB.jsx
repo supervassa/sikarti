@@ -44,6 +44,7 @@ const PresensiWB = () => {
   const [checkedInSessionIds, setCheckedInSessionIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [activeSession, setActiveSession] = useState(null); // sesi yang lagi dibuka modal
+  const [presensiMode, setPresensiMode] = useState("luring"); // luring | daring
   const [message, setMessage] = useState("");
   const [now, setNow] = useState(() => Date.now());
   const [invoices, setInvoices] = useState([]);
@@ -124,7 +125,7 @@ const PresensiWB = () => {
     return Math.max(0, Math.floor((expiresMs - now) / 1000));
   };
 
-  const handleCheckin = async ({ fotoBase64, lokasi }) => {
+  const handleCheckin = async ({ fotoBase64, lokasi, mode }) => {
     setMessage("");
     if (hasTunggakan) {
       setActiveSession(null);
@@ -142,7 +143,11 @@ const PresensiWB = () => {
       setMessage("Anda sudah presensi untuk kelas ini.");
       return;
     }
-    await checkinPresensi(currentUser, activeSession, { fotoBase64, lokasi });
+    await checkinPresensi(currentUser, activeSession, {
+      fotoBase64,
+      lokasi,
+      mode,
+    });
     setActiveSession(null);
   };
 
@@ -187,7 +192,10 @@ const PresensiWB = () => {
     return (
       <button
         type="button"
-        onClick={() => setActiveSession(session)}
+        onClick={() => {
+          setPresensiMode("luring");
+          setActiveSession(session);
+        }}
         className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg"
       >
         <FontAwesomeIcon icon={faCamera} className="w-3 h-3" />
@@ -265,6 +273,8 @@ const PresensiWB = () => {
           title="Presensi"
           subtitle={`${activeSession.namaMapel} · sisa ${formatCountdown(remainingSeconds(activeSession) ?? 0)}`}
           watermarkLabel={currentUser?.nama}
+          mode={presensiMode}
+          onModeChange={setPresensiMode}
           onCancel={() => setActiveSession(null)}
           onSubmit={handleCheckin}
         />

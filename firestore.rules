@@ -50,7 +50,7 @@ service cloud.firestore {
     // (createdAt/updatedAt harus baru) maupun edit (createdAt dikunci di pemanggil).
     function isValidWBProfileShape(data) {
       return data.keys().hasAll(['nama', 'email', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
-        && data.keys().hasOnly(['nama', 'email', 'emailKontak', 'nomorInduk', 'paket', 'nik', 'noHp', 'tahunAngkatan', 'tahunLulus', 'terakhirAktif', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['nama', 'email', 'emailKontak', 'nomorInduk', 'paket', 'nik', 'noHp', 'tahunAngkatan', 'tahunLulus', 'terakhirAktif', 'role', 'kd_role', 'status', 'createdAt', 'updatedAt', 'nisn', 'jenisKelamin', 'agama', 'tempatLahir', 'tanggalLahir', 'alamat', 'sekolahAsal', 'namaAyah', 'namaIbu', 'tingkat', 'nis'])
         && data.nama is string && data.nama.size() > 1 && data.nama.size() <= 100
         && data.email is string && data.email.size() > 4 && data.email.size() <= 254
         && data.role == 'wb' && data.kd_role == 22 && data.status in ['AKTIF', 'NONAKTIF', 'LULUS']
@@ -62,6 +62,18 @@ service cloud.firestore {
         && (!('tahunAngkatan' in data.keys()) || (data.tahunAngkatan is string && data.tahunAngkatan.size() <= 20))
         && (!('nik' in data.keys()) || (data.nik is string && data.nik.size() <= 30))
         && (!('noHp' in data.keys()) || (data.noHp is string && data.noHp.size() <= 30))
+        // Data diri lengkap (dari impor Dapodik / form admin). Semua opsional & string pendek.
+        && (!('nisn' in data.keys()) || (data.nisn is string && data.nisn.size() <= 30))
+        && (!('jenisKelamin' in data.keys()) || (data.jenisKelamin is string && data.jenisKelamin.size() <= 20))
+        && (!('agama' in data.keys()) || (data.agama is string && data.agama.size() <= 20))
+        && (!('tempatLahir' in data.keys()) || (data.tempatLahir is string && data.tempatLahir.size() <= 60))
+        && (!('tanggalLahir' in data.keys()) || (data.tanggalLahir is string && data.tanggalLahir.size() <= 20))
+        && (!('alamat' in data.keys()) || (data.alamat is string && data.alamat.size() <= 300))
+        && (!('sekolahAsal' in data.keys()) || (data.sekolahAsal is string && data.sekolahAsal.size() <= 120))
+        && (!('namaAyah' in data.keys()) || (data.namaAyah is string && data.namaAyah.size() <= 100))
+        && (!('namaIbu' in data.keys()) || (data.namaIbu is string && data.namaIbu.size() <= 100))
+        && (!('tingkat' in data.keys()) || (data.tingkat is string && data.tingkat.size() <= 10))
+        && (!('nis' in data.keys()) || (data.nis is string && data.nis.size() <= 30))
         && (data.status == 'LULUS'
             ? (data.tahunLulus is string && data.tahunLulus.size() > 0 && data.tahunLulus.size() <= 20)
             : !('tahunLulus' in data.keys()))
@@ -231,6 +243,28 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt
         && isRecentServerTime(request.resource.data.updatedAt);
     }
+    // Tugas menempel pada satu mapel (mapelId/mapelNama/paket didenormalisasi dari
+    // subjects). Input inti: judul + link file Google Drive (URL http/https).
+    function isValidTugasShape(data) {
+      return data.keys().hasAll(['mapelId', 'mapelNama', 'paket', 'judul', 'linkFile', 'author', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['mapelId', 'mapelNama', 'paket', 'judul', 'linkFile', 'author', 'createdAt', 'updatedAt'])
+        && data.mapelId is string && data.mapelId.size() > 0 && data.mapelId.size() <= 128
+        && data.mapelNama is string && data.mapelNama.size() > 0 && data.mapelNama.size() <= 100
+        && data.paket in ['Paket A', 'Paket B', 'Paket C']
+        && data.judul is string && data.judul.size() > 0 && data.judul.size() <= 200
+        && data.linkFile is string && data.linkFile.size() > 0 && data.linkFile.size() <= 500
+        && data.linkFile.matches('^https?://.*')
+        && data.author is string && data.author.size() <= 100;
+    }
+    function isValidTugasCreate(data) {
+      return isValidTugasShape(data) && isRecentServerTime(data.createdAt) && isRecentServerTime(data.updatedAt);
+    }
+    function isValidTugasUpdate() {
+      return isValidTugasShape(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.author == resource.data.author
+        && isRecentServerTime(request.resource.data.updatedAt);
+    }
     function isValidJadwalShape(data) {
       return data.keys().hasAll(['namaMapel', 'hari', 'jamMulai', 'jamSelesai', 'pengajar', 'paket', 'createdAt', 'updatedAt'])
         && data.keys().hasOnly(['namaMapel', 'hari', 'jamMulai', 'jamSelesai', 'pengajar', 'paket', 'createdAt', 'updatedAt'])
@@ -272,8 +306,8 @@ service cloud.firestore {
     // Presensi mandiri WB: hanya boleh menandai diri sendiri Hadir, wajib terhubung ke
     // classSessions yang masih aktif (belum lewat durasiMenit sejak startedAt), wajib foto+lokasi.
     function isValidSelfCheckinDoc(data) {
-      return data.keys().hasAll(['wbId', 'nama', 'status', 'tanggal', 'sessionId', 'namaMapel', 'lokasi', 'fotoBase64', 'recordedBy', 'createdAt'])
-        && data.keys().hasOnly(['wbId', 'nama', 'status', 'tanggal', 'sessionId', 'namaMapel', 'lokasi', 'fotoBase64', 'recordedBy', 'createdAt'])
+      return data.keys().hasAll(['wbId', 'nama', 'status', 'tanggal', 'sessionId', 'namaMapel', 'lokasi', 'fotoBase64', 'mode', 'recordedBy', 'createdAt'])
+        && data.keys().hasOnly(['wbId', 'nama', 'status', 'tanggal', 'sessionId', 'namaMapel', 'lokasi', 'fotoBase64', 'mode', 'recordedBy', 'createdAt'])
         && isValidPresensiBase(data)
         && data.status == 'Hadir'
         && data.wbId == request.auth.uid
@@ -281,6 +315,13 @@ service cloud.firestore {
         && data.namaMapel is string && data.namaMapel.size() > 0 && data.namaMapel.size() <= 100
         && isValidLatLng(data.lokasi)
         && data.fotoBase64 is string && data.fotoBase64.size() > 0 && data.fotoBase64.size() <= 900000
+        && data.mode in ['luring', 'daring']
+        // Presensi LURING wajib di area PKBM. Rentang = 5 titik lembaga + toleransi GPS
+        // (samakan dengan src/utils/presensiLokasi.js jika diubah).
+        && (data.mode != 'luring' || (
+             data.lokasi.lat >= -8.3067194 && data.lokasi.lat <= -8.3058528
+             && data.lokasi.lng >= 113.68685 && data.lokasi.lng <= 113.68765
+           ))
         && isClassSessionActive(data.sessionId);
     }
     // Sesi dianggap aktif kalau belum distop manual DAN belum lewat durasinya.
@@ -477,6 +518,36 @@ service cloud.firestore {
       allow delete: if isStaff();
     }
 
+    // wbNik/{nik}: indeks unik NIK -> uid. Karena "allow create" hanya berlaku saat
+    // path belum ada, penulisan ke NIK yang sudah dipakai gagal (jadi "update", ditolak).
+    // Ini penjaga keras terhadap Warga Belajar terdaftar dua kali.
+    match /wbNik/{nik} {
+      allow read: if isStaff();
+      allow create: if isStaff()
+        && request.resource.data.keys().hasOnly(['uid', 'nik', 'createdAt'])
+        && request.resource.data.keys().hasAll(['uid', 'nik', 'createdAt'])
+        && request.resource.data.uid is string && request.resource.data.uid.size() > 0
+        && request.resource.data.nik == nik
+        && nik.matches('^[0-9]{16}$')
+        && isRecentServerTime(request.resource.data.createdAt);
+      allow update: if false;
+      allow delete: if isStaff();
+    }
+
+    // wbPhotos/{uid}: pas foto WB (base64) dipisah dari dokumen users supaya daftar WB
+    // tetap ringan. Hanya staff yang menulis; WB & pengajar boleh membaca.
+    match /wbPhotos/{uid} {
+      allow read: if isOwner(uid) || isStaff() || isPengajar();
+      allow create, update: if isStaff()
+        && request.resource.data.keys().hasOnly(['base64', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['base64', 'updatedAt'])
+        && request.resource.data.base64 is string
+        && request.resource.data.base64.size() > 0
+        && request.resource.data.base64.size() <= 900000
+        && isRecentServerTime(request.resource.data.updatedAt);
+      allow delete: if isStaff();
+    }
+
     match /admins/{uid} {
       allow get, list: if isSuperadmin();
       allow create: if isSuperadmin() && isValidAdminDirectory(uid, request.resource.data);
@@ -511,6 +582,14 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create: if isStaff() && isValidJadwalCreate(request.resource.data);
       allow update: if isStaff() && isValidJadwalUpdate();
+      allow delete: if isStaff();
+    }
+
+    // Tugas per mapel — dikelola staff, dibaca semua pengguna login (WB filter per paket).
+    match /tugas/{tugasId} {
+      allow get, list: if isSignedIn();
+      allow create: if isStaff() && isValidTugasCreate(request.resource.data);
+      allow update: if isStaff() && isValidTugasUpdate();
       allow delete: if isStaff();
     }
 

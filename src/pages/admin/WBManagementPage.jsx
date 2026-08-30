@@ -9,6 +9,7 @@ import { createWB, normalizeWBStatus } from "../../services/adminServices";
 import {
   DUMMY_TAHUN_ANGKATAN,
   isDummyNomorInduk,
+  isValidNIK,
   isValidNomorInduk,
   suggestNomorInduk,
 } from "../../utils/wbLogin";
@@ -35,6 +36,17 @@ const STATUS_META = {
   LULUS: { label: "Lulus", className: "bg-blue-50 text-blue-700" },
 };
 
+const JENIS_KELAMIN_OPTIONS = ["Laki-laki", "Perempuan"];
+const AGAMA_OPTIONS = [
+  "Islam",
+  "Kristen",
+  "Katolik",
+  "Hindu",
+  "Buddha",
+  "Konghucu",
+  "Lainnya",
+];
+
 const EMPTY_FORM = {
   nama: "",
   nomorInduk: "",
@@ -43,6 +55,16 @@ const EMPTY_FORM = {
   tahunAngkatan: DEFAULT_TAHUN_ANGKATAN,
   nik: "",
   noHp: "",
+  nisn: "",
+  jenisKelamin: "",
+  agama: "",
+  tempatLahir: "",
+  tanggalLahir: "",
+  alamat: "",
+  sekolahAsal: "",
+  namaAyah: "",
+  namaIbu: "",
+  tingkat: "",
 };
 
 const WBManagementPage = () => {
@@ -210,9 +232,21 @@ const WBManagementPage = () => {
       alert("Nomor Induk itu sudah dipakai Warga Belajar lain.");
       return;
     }
+    const nik = form.nik.trim();
+    if (!isValidNIK(nik)) {
+      alert("NIK wajib diisi dan harus 16 digit angka.");
+      return;
+    }
+    if (listWB.some((wb) => String(wb.nik || "").trim() === nik)) {
+      alert("NIK itu sudah dipakai Warga Belajar lain.");
+      return;
+    }
     setSaving(true);
     try {
-      const result = await createWB({ ...form, nomorInduk: ni }, currentUser);
+      const result = await createWB(
+        { ...form, nomorInduk: ni, nik },
+        currentUser,
+      );
       setIsModalOpen(false);
       setForm(EMPTY_FORM);
       setCopied(false);
@@ -608,13 +642,18 @@ const WBManagementPage = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    NIK (opsional)
+                    NIK (wajib, 16 digit)
                   </label>
                   <input
+                    required
                     type="text"
+                    inputMode="numeric"
                     value={form.nik}
-                    onChange={(e) => updateAddForm({ nik: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                    onChange={(e) =>
+                      updateAddForm({ nik: e.target.value.replace(/\D/g, "") })
+                    }
+                    maxLength={16}
+                    className="w-full px-3 py-2 border rounded-lg text-sm font-mono outline-none focus:border-red-500"
                   />
                 </div>
                 <div>
@@ -629,6 +668,161 @@ const WBManagementPage = () => {
                   />
                 </div>
               </div>
+
+              <details className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <summary className="text-xs font-semibold text-slate-600 cursor-pointer">
+                  Data diri lengkap (opsional)
+                </summary>
+                <div className="mt-3 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        NISN
+                      </label>
+                      <input
+                        type="text"
+                        value={form.nisn}
+                        onChange={(e) => updateAddForm({ nisn: e.target.value })}
+                        placeholder="Kosongkan bila belum ada"
+                        className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Jenis Kelamin
+                      </label>
+                      <select
+                        value={form.jenisKelamin}
+                        onChange={(e) =>
+                          updateAddForm({ jenisKelamin: e.target.value })
+                        }
+                        className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                      >
+                        <option value="">—</option>
+                        {JENIS_KELAMIN_OPTIONS.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Agama
+                      </label>
+                      <select
+                        value={form.agama}
+                        onChange={(e) => updateAddForm({ agama: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                      >
+                        <option value="">—</option>
+                        {AGAMA_OPTIONS.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Tingkat / Kelas
+                      </label>
+                      <input
+                        type="text"
+                        value={form.tingkat}
+                        onChange={(e) =>
+                          updateAddForm({ tingkat: e.target.value })
+                        }
+                        placeholder="mis. 10"
+                        className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Tempat Lahir
+                      </label>
+                      <input
+                        type="text"
+                        value={form.tempatLahir}
+                        onChange={(e) =>
+                          updateAddForm({ tempatLahir: e.target.value })
+                        }
+                        className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Tanggal Lahir
+                      </label>
+                      <input
+                        type="date"
+                        value={form.tanggalLahir}
+                        onChange={(e) =>
+                          updateAddForm({ tanggalLahir: e.target.value })
+                        }
+                        className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      Alamat
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={form.alamat}
+                      onChange={(e) => updateAddForm({ alamat: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      Sekolah Asal
+                    </label>
+                    <input
+                      type="text"
+                      value={form.sekolahAsal}
+                      onChange={(e) =>
+                        updateAddForm({ sekolahAsal: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Nama Ayah
+                      </label>
+                      <input
+                        type="text"
+                        value={form.namaAyah}
+                        onChange={(e) =>
+                          updateAddForm({ namaAyah: e.target.value })
+                        }
+                        className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Nama Ibu
+                      </label>
+                      <input
+                        type="text"
+                        value={form.namaIbu}
+                        onChange={(e) =>
+                          updateAddForm({ namaIbu: e.target.value })
+                        }
+                        className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </details>
+
               <div className="flex justify-end space-x-2 pt-3">
                 <button
                   type="button"

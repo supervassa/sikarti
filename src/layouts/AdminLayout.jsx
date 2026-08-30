@@ -7,6 +7,7 @@ import {
   faChalkboardUser,
   faBookOpen,
   faCalendarDays,
+  faFileLines,
   faClipboardList,
   faNewspaper,
   faCalendarCheck,
@@ -37,6 +38,7 @@ const AdminLayout = () => {
     { path: "/admin/pengajar", label: "Data Pengajar", icon: faChalkboardUser },
     { path: "/admin/mapel", label: "Mata Pelajaran", icon: faBookOpen },
     { path: "/admin/jadwal", label: "Jadwal Pelajaran", icon: faCalendarDays },
+    { path: "/admin/tugas", label: "Tugas", icon: faFileLines },
     {
       path: "/admin/pendaftar",
       label: "Pendaftar Calon WB",

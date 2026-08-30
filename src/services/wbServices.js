@@ -10,6 +10,7 @@ import {
   where,
 } from "firebase/firestore";
 import { createAuditLog } from "./adminServices";
+import { isInsidePresensiArea } from "../utils/presensiLokasi";
 
 export const todayISO = () => new Date().toISOString().slice(0, 10);
 
@@ -27,11 +28,16 @@ export const hasCheckedInForSession = async (uid, sessionId) => {
 
 // Presensi mandiri WB: hanya bisa selama sesi kelas (classSessions) masih aktif — lihat
 // firestore.rules isClassSessionActive. Wajib foto+lokasi dari CaptureAttendanceModal.
+// mode "luring" mewajibkan lokasi di area PKBM (ditegakkan ulang di firestore.rules).
 export const checkinPresensi = async (
   currentUser,
   session,
-  { fotoBase64, lokasi },
+  { fotoBase64, lokasi, mode = "luring" },
 ) => {
+  const presensiMode = mode === "daring" ? "daring" : "luring";
+  if (presensiMode === "luring" && !isInsidePresensiArea(lokasi)) {
+    throw new Error("Anda tidak di lokasi presensi");
+  }
   const docRef = await addDoc(collection(db, "presensi"), {
     wbId: currentUser.uid,
     nama: currentUser.nama,
@@ -41,6 +47,7 @@ export const checkinPresensi = async (
     namaMapel: session.namaMapel,
     lokasi,
     fotoBase64,
+    mode: presensiMode,
     recordedBy: currentUser.uid,
     createdAt: serverTimestamp(),
   });

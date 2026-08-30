@@ -143,7 +143,7 @@ const LoginPage = () => {
   };
 
   const tabClass = (active) =>
-    `flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all ${
+    `flex-1 py-2 sm:py-2.5 px-1 text-xs sm:text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
       active
         ? "bg-white text-[#0b1f3d] shadow-sm"
         : "text-gray-500 hover:text-gray-700"
@@ -172,7 +172,8 @@ const LoginPage = () => {
 
         {/* Form Body */}
         <div className="p-8 space-y-6">
-          {/* Pemilih jenis akun */}
+          {/* Pemilih jenis akun. "Calon WB" bukan mode form di sini — langsung
+              diarahkan ke halaman login calon pendaftar. */}
           <div className="flex gap-1 p-1 bg-gray-100 rounded-xl">
             <button
               type="button"
@@ -187,6 +188,13 @@ const LoginPage = () => {
               className={tabClass(mode === "staf")}
             >
               Pengajar &amp; Staf
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/pendaftaran/login")}
+              className={tabClass(false)}
+            >
+              Calon WB
             </button>
           </div>
 
@@ -367,21 +375,12 @@ const LoginPage = () => {
           )}
         </div>
 
-        {/* Footer Text */}
-        <div className="bg-gray-50 py-4 px-8 border-t border-gray-100 text-center space-y-1">
+        {/* Footer Text — akses "Calon WB" kini lewat pemilih jenis akun di atas. */}
+        <div className="bg-gray-50 py-4 px-8 border-t border-gray-100 text-center">
           <p className="text-sm text-gray-600">
             Kembali ke{" "}
             <Link to="/" className="font-medium text-red-600 hover:text-red-500">
               Beranda
-            </Link>
-          </p>
-          <p className="text-xs text-gray-500">
-            Calon pendaftar?{" "}
-            <Link
-              to="/pendaftaran/login"
-              className="font-medium text-amber-600 hover:text-amber-500"
-            >
-              Masuk di sini
             </Link>
           </p>
         </div>

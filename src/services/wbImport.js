@@ -1,13 +1,18 @@
-// Impor Warga Belajar dari file Excel. Dua format didukung otomatis:
-//  - "template"  : file rapi hasil "Unduh Template" (kolom: Nama, Paket, Tahun Angkatan)
-//  - "mentah"    : sheet "PAKET ABC" dari data dinas (judul section di kolom A, dll.)
-// Memakai alur createWB yang sudah ada: tiap WB dapat Nomor Induk + password ter-generate,
-// dokumen users/{uid} + wbSecrets/{uid}. "Inti saja": hanya nama, paket, Nomor Induk,
-// tahun angkatan, status — NISN/alamat/ortu/dll tidak disimpan.
+// Impor Warga Belajar dari file Excel. Format didukung otomatis:
+//  - "dapodik"   : ekspor Dapodik "Daftar Peserta Didik" — data lengkap (NIK, NISN,
+//                  TTL, alamat, agama, ortu, rombel/tingkat, sekolah asal, dst).
+//  - "template"  : file rapi hasil "Unduh Template" (kolom: Nama, NIK, Paket, Tahun Angkatan)
+//  - "mentah"    : sheet "PAKET ABC" dari data dinas lama (tanpa NIK — dianggap usang).
+// Memakai alur createWB: tiap WB dapat Nomor Induk + password ter-generate, dokumen
+// users/{uid} + wbNik/{nik} + wbSecrets/{uid}. NIK wajib untuk semua WB baru.
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../config/firebase.js";
 import { createWB, deleteWB } from "./adminServices.js";
-import { nomorIndukPrefix, suggestNomorInduk } from "../utils/wbLogin.js";
+import {
+  isValidNIK,
+  nomorIndukPrefix,
+  suggestNomorInduk,
+} from "../utils/wbLogin.js";
 
 export const IMPORT_TAHUN_ANGKATAN = "2026/2027";
 export const SHEET_DEFAULT = "PAKET ABC";
@@ -39,6 +44,84 @@ const cleanNama = (v) =>
     .replace(/\s+/g, " ")
     .trim();
 
+// Nama Dapodik kerap HURUF BESAR semua ("ADI WIJAYA") — jadikan Title Case.
+// String yang sudah ada huruf kecilnya ("Abdul Azis") dibiarkan.
+const tidyNama = (v) => {
+  const s = String(v ?? "").replace(/\s+/g, " ").trim();
+  if (s && s === s.toUpperCase()) {
+    return s
+      .toLowerCase()
+      .replace(/(^|\s|['-])([a-z])/g, (_, p, c) => p + c.toUpperCase());
+  }
+  return s;
+};
+
+const digits = (v) => String(v ?? "").replace(/\D/g, "");
+const blankIfSpaces = (v) => {
+  const s = String(v ?? "").trim();
+  return s || "";
+};
+
+// "Kelas 11" / "Kelas VII" / "11" -> "11" (tingkat sebagai angka string).
+const ROMAN = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10, xi: 11, xii: 12 };
+const parseTingkat = (v) => {
+  const s = String(v ?? "").trim();
+  const num = s.match(/\d{1,2}/);
+  if (num) return num[0];
+  const rom = s.replace(/kelas\s*/i, "").trim().toLowerCase();
+  return ROMAN[rom] ? String(ROMAN[rom]) : "";
+};
+
+// Tingkat -> Paket kesetaraan. 1–6 = A (SD), 7–9 = B (SMP), 10–12 = C (SMA).
+const paketFromTingkat = (tingkat) => {
+  const n = Number(tingkat);
+  if (n >= 1 && n <= 6) return "Paket A";
+  if (n >= 7 && n <= 9) return "Paket B";
+  if (n >= 10 && n <= 12) return "Paket C";
+  return null;
+};
+
+// Normalisasi tanggal lahir -> "YYYY-MM-DD" (dipakai <input type=date> & rules).
+const serialToISO = (n) => {
+  const d = new Date(Math.round((n - 25569) * 86400 * 1000));
+  return isNaN(d) ? "" : d.toISOString().slice(0, 10);
+};
+const toISODate = (v) => {
+  if (v == null || v === "") return "";
+  if (v instanceof Date && !isNaN(v)) return v.toISOString().slice(0, 10);
+  if (typeof v === "number" && isFinite(v)) return serialToISO(v);
+  const s = String(v).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (/^\d{4,5}$/.test(s)) return serialToISO(Number(s)); // serial Excel sbg teks
+  const parts = s.match(/^(\d{1,2})[/. -](\d{1,2})[/. -](\d{4})$/);
+  if (parts) {
+    const a = +parts[1];
+    const b = +parts[2];
+    const y = parts[3];
+    // Tentukan hari vs bulan; ambigu -> asumsi D/M (lokal Indonesia).
+    let d = a;
+    let m = b;
+    if (a > 12 && b <= 12) {
+      d = a;
+      m = b;
+    } else if (b > 12 && a <= 12) {
+      d = b;
+      m = a;
+    }
+    if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    }
+  }
+  return "";
+};
+
+const jkFull = (v) => {
+  const s = String(v ?? "").trim().toUpperCase();
+  if (s === "L" || s.startsWith("LAKI")) return "Laki-laki";
+  if (s === "P" || s.startsWith("PEREMPUAN")) return "Perempuan";
+  return "";
+};
+
 // --- 1. BACA FILE ---
 export const parseWorkbook = async (file) => {
   const XLSX = await import("xlsx");
@@ -51,20 +134,20 @@ export const parseWorkbook = async (file) => {
 export const downloadTemplate = async () => {
   const XLSX = await import("xlsx");
   const aoa = [
-    ["Nama", "Paket", "Tahun Angkatan"],
-    ["Contoh - Siti Aminah", "Paket C", IMPORT_TAHUN_ANGKATAN],
-    ["Contoh - Budi Santoso", "Paket B", IMPORT_TAHUN_ANGKATAN],
-    ["Contoh - Ahmad Fauzi", "Paket A", IMPORT_TAHUN_ANGKATAN],
+    ["Nama", "NIK", "Paket", "Tahun Angkatan"],
+    ["Contoh - Siti Aminah", "3509010101010001", "Paket C", IMPORT_TAHUN_ANGKATAN],
+    ["Contoh - Budi Santoso", "3509010101010002", "Paket B", IMPORT_TAHUN_ANGKATAN],
+    ["Contoh - Ahmad Fauzi", "3509010101010003", "Paket A", IMPORT_TAHUN_ANGKATAN],
   ];
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws["!cols"] = [{ wch: 32 }, { wch: 14 }, { wch: 16 }];
+  ws["!cols"] = [{ wch: 32 }, { wch: 20 }, { wch: 14 }, { wch: 16 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, TEMPLATE_SHEET);
   XLSX.writeFile(wb, "template-impor-wb.xlsx");
 };
 
-// --- 3. PARSE SATU SHEET (auto: template atau mentah) ---
-// Balik: { format: "template" | "mentah", rows: [{ no, nama, paket, tahunAngkatan, flags }] }
+// --- 3. PARSE SATU SHEET (auto: dapodik / template / mentah) ---
+// Balik: { format, rows: [{ no, nama, nik, paket, tahunAngkatan, flags, ...dataDiri }] }
 export const parseSheet = (workbook, XLSX, sheetName) => {
   const ws = workbook.Sheets[sheetName];
   if (!ws) return { format: "mentah", rows: [] };
@@ -73,6 +156,24 @@ export const parseSheet = (workbook, XLSX, sheetName) => {
     raw: true,
     blankrows: false,
   });
+
+  // Dapodik: ada baris header yang memuat "NIPD" + "NISN".
+  const dapodikHeaderIdx = grid.findIndex(
+    (r) =>
+      r.some((c) => typeof c === "string" && /^nipd$/i.test(c.trim())) &&
+      r.some((c) => typeof c === "string" && /^nisn$/i.test(c.trim())),
+  );
+  if (dapodikHeaderIdx >= 0) {
+    const textGrid = XLSX.utils.sheet_to_json(ws, {
+      header: 1,
+      raw: false,
+      blankrows: false,
+    });
+    return {
+      format: "dapodik",
+      rows: parseDapodikGrid(textGrid, dapodikHeaderIdx),
+    };
+  }
 
   const headerRowIdx = grid.findIndex((r) =>
     r.some((c) => typeof c === "string" && /^nama$/i.test(c.trim())),
@@ -93,6 +194,7 @@ const parseTemplateGrid = (grid, headerRowIdx) => {
     String(c ?? "").trim().toLowerCase(),
   );
   const iNama = header.findIndex((h) => h.includes("nama"));
+  const iNik = header.findIndex((h) => h === "nik" || h.includes("nik"));
   const iPaket = header.findIndex((h) => h.includes("paket"));
   const iTahun = header.findIndex(
     (h) => h.includes("tahun") || h.includes("angkatan"),
@@ -105,6 +207,7 @@ const parseTemplateGrid = (grid, headerRowIdx) => {
     const nama = cleanNama(raw[iNama]);
     if (!nama) continue;
     const paket = normalizePaket(raw[iPaket]);
+    const nik = iNik >= 0 ? digits(raw[iNik]) : "";
     const tahunAngkatan =
       iTahun >= 0 && raw[iTahun]
         ? String(raw[iTahun]).trim()
@@ -113,13 +216,15 @@ const parseTemplateGrid = (grid, headerRowIdx) => {
     const flags = [];
     if (CONTOH_RE.test(nama)) flags.push("contoh");
     if (!paket) flags.push("paket-invalid");
-    const key = `${paket}|${nama.toLowerCase()}`;
+    if (!isValidNIK(nik)) flags.push("nik-kosong");
+    const key = nik || `${paket}|${nama.toLowerCase()}`;
     if (seen.has(key)) flags.push("duplikat");
     seen.add(key);
 
     rows.push({
       no: r,
       nama,
+      nik,
       paket: paket || "Paket C",
       tahunAngkatan,
       flags,
@@ -128,7 +233,7 @@ const parseTemplateGrid = (grid, headerRowIdx) => {
   return rows;
 };
 
-// Sheet "PAKET ABC": judul section di kolom A menentukan paket; baris WB = kolom A angka & kolom B nama.
+// Sheet "PAKET ABC" lama (tanpa NIK) — semua baris dikunci; pakai ekspor Dapodik.
 const parseMentahGrid = (grid) => {
   const rows = [];
   const seen = new Set();
@@ -150,7 +255,7 @@ const parseMentahGrid = (grid) => {
     const nama = cleanNama(namaAsli);
     if (!nama) continue;
 
-    const flags = [];
+    const flags = ["nik-kosong"];
     if (BERHENTI_RE.test(namaAsli)) flags.push("kemungkinan-berhenti");
     if (BELUM_RE.test(namaAsli)) flags.push("belum-daftar");
     const key = `${currentPaket}|${nama.toLowerCase()}`;
@@ -160,7 +265,101 @@ const parseMentahGrid = (grid) => {
     rows.push({
       no: a,
       nama,
+      nik: "",
       paket: currentPaket,
+      tahunAngkatan: IMPORT_TAHUN_ANGKATAN,
+      flags,
+    });
+  }
+  return rows;
+};
+
+// Ekspor Dapodik "Daftar Peserta Didik". Kolom dipetakan berdasar nama header
+// (bukan indeks tetap) karena blok "Data Ayah/Ibu/Wali" ter-merge.
+const parseDapodikGrid = (grid, headerIdx) => {
+  const header = grid[headerIdx].map((c) => String(c ?? "").trim());
+  const find = (re) => header.findIndex((h) => re.test(h));
+  const col = {
+    nama: find(/^nama$/i),
+    nipd: find(/^nipd$/i),
+    jk: find(/^jk$/i),
+    nisn: find(/^nisn$/i),
+    tempatLahir: find(/tempat lahir/i),
+    tglLahir: find(/tanggal lahir/i),
+    nik: find(/^nik$/i),
+    agama: find(/^agama$/i),
+    alamat: find(/^alamat$/i),
+    rt: find(/^rt$/i),
+    rw: find(/^rw$/i),
+    dusun: find(/^dusun$/i),
+    kelurahan: find(/kelurahan|^desa$/i),
+    kecamatan: find(/^kecamatan$/i),
+    kodePos: find(/kode pos/i),
+    telepon: find(/^telepon$/i),
+    hp: find(/^hp$/i),
+    email: find(/e-?mail/i),
+    rombel: find(/rombel/i),
+    sekolahAsal: find(/sekolah asal/i),
+    ayahNama: header.indexOf("Data Ayah"),
+    ibuNama: header.indexOf("Data Ibu"),
+  };
+
+  const at = (raw, i) => (i >= 0 ? blankIfSpaces(raw[i]) : "");
+  const rows = [];
+  const seen = new Set();
+
+  for (let r = headerIdx + 1; r < grid.length; r += 1) {
+    const raw = grid[r] || [];
+    const namaRaw = at(raw, col.nama);
+    if (!namaRaw || /^nama$/i.test(namaRaw)) continue; // lewati sub-header / baris kosong
+
+    const nama = tidyNama(namaRaw);
+    const nik = digits(at(raw, col.nik));
+    const tingkat = parseTingkat(at(raw, col.rombel));
+    const paket = paketFromTingkat(tingkat) || "Paket C";
+    const nisn = digits(at(raw, col.nisn));
+
+    const alamat = [
+      at(raw, col.alamat),
+      at(raw, col.rt) && `RT ${at(raw, col.rt)}`,
+      at(raw, col.rw) && `RW ${at(raw, col.rw)}`,
+      at(raw, col.dusun) && `Dusun ${at(raw, col.dusun)}`,
+      at(raw, col.kelurahan),
+      at(raw, col.kecamatan),
+      at(raw, col.kodePos) && `Kode Pos ${at(raw, col.kodePos)}`,
+    ]
+      .filter(Boolean)
+      .join(", ")
+      .slice(0, 300);
+
+    const emailRaw = at(raw, col.email).toLowerCase();
+    const emailKontak = emailRaw.includes("@") ? emailRaw : "";
+
+    const flags = [];
+    if (!isValidNIK(nik)) flags.push("nik-kosong");
+    if (!tingkat) flags.push("tingkat-kosong");
+    const key = nik || `${paket}|${nama.toLowerCase()}`;
+    if (seen.has(key)) flags.push("duplikat");
+    seen.add(key);
+
+    rows.push({
+      no: at(raw, col.nipd) || r,
+      nama,
+      nik,
+      nis: digits(at(raw, col.nipd)),
+      nisn,
+      jenisKelamin: jkFull(at(raw, col.jk)),
+      agama: at(raw, col.agama),
+      tempatLahir: at(raw, col.tempatLahir),
+      tanggalLahir: toISODate(raw[col.tglLahir]),
+      alamat,
+      noHp: digits(at(raw, col.hp)) || digits(at(raw, col.telepon)),
+      emailKontak,
+      sekolahAsal: at(raw, col.sekolahAsal),
+      namaAyah: tidyNama(at(raw, col.ayahNama)),
+      namaIbu: tidyNama(at(raw, col.ibuNama)),
+      tingkat,
+      paket,
       tahunAngkatan: IMPORT_TAHUN_ANGKATAN,
       flags,
     });
@@ -189,7 +388,15 @@ export const assignNomorInduk = (rows, existingWBList) => {
   });
 };
 
-export const defaultSelected = (row) => row.flags.length === 0;
+// Flag "lunak" (peringatan) — baris tetap dicentang default. Flag lain (nik-kosong,
+// paket-invalid, duplikat, contoh) menonaktifkan centang default.
+const SOFT_FLAGS = new Set([
+  "tingkat-kosong",
+  "kemungkinan-berhenti",
+  "belum-daftar",
+]);
+export const defaultSelected = (row) =>
+  row.flags.every((f) => SOFT_FLAGS.has(f));
 
 // --- 5. JALANKAN IMPOR (berurutan, aman diulang) ---
 export const runImport = async (selectedRows, actor, { onProgress } = {}) => {
@@ -197,14 +404,17 @@ export const runImport = async (selectedRows, actor, { onProgress } = {}) => {
   for (let i = 0; i < selectedRows.length; i += 1) {
     const row = selectedRows[i];
     onProgress?.(i, selectedRows.length, row);
+    // Buang field internal; sisanya (nik + data diri) diteruskan apa adanya ke createWB.
+    const { no, flags, nomorInduk, ...profile } = row;
+    void no;
+    void flags;
     let attempt = 0;
     for (;;) {
       try {
         const res = await createWB(
           {
-            nama: row.nama,
-            nomorInduk: row.nomorInduk,
-            paket: row.paket,
+            ...profile,
+            nomorInduk,
             tahunAngkatan: row.tahunAngkatan || IMPORT_TAHUN_ANGKATAN,
           },
           actor,
@@ -219,9 +429,21 @@ export const runImport = async (selectedRows, actor, { onProgress } = {}) => {
         break;
       } catch (err) {
         const code = err?.code || err?.cause?.code;
+        const msg = err?.message || "";
+        if (/NIK sudah terdaftar/i.test(msg)) {
+          results.push({
+            nama: row.nama,
+            paket: row.paket,
+            nomorInduk: row.nomorInduk,
+            password: "",
+            status: "skip",
+            note: "NIK sudah terdaftar",
+          });
+          break;
+        }
         if (
           code === "auth/email-already-in-use" ||
-          /sudah dipakai/i.test(err?.message || "")
+          /sudah dipakai/i.test(msg)
         ) {
           results.push({
             nama: row.nama,

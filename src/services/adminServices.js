@@ -18,7 +18,11 @@ import {
   updatePassword,
 } from "firebase/auth";
 import { getSecondaryAuth } from "./adminManagement.js";
-import { buildWbLoginEmail, generateWbPassword } from "../utils/wbLogin.js";
+import {
+  buildWbLoginEmail,
+  generateWbPassword,
+  isValidNIK,
+} from "../utils/wbLogin.js";
 
 const CURRENT_TAHUN_AJARAN = (() => {
   const y = new Date().getFullYear();
@@ -147,17 +151,65 @@ const deleteUserRecord = async (user, actor, moduleName) => {
 // --- 1. MANAJEMEN WARGA BELAJAR (WB) ---
 // WB login pakai Nomor Induk (angka) + password yang di-generate & dicetak admin, BUKAN email.
 // Nomor Induk dipetakan ke synthetic email (buildWbLoginEmail) di balik layar.
-export const createWB = async (dataWB, actor) => {
-  const { nama, nomorInduk, emailKontak, paket, tahunAngkatan, nik, noHp } =
-    dataWB;
-  const ni = String(nomorInduk).trim();
-  const password = generateWbPassword();
 
-  const extra = { nomorInduk: ni, paket, tahunAngkatan };
-  if (nik && nik.trim()) extra.nik = nik.trim();
-  if (noHp && noHp.trim()) extra.noHp = noHp.trim();
-  if (emailKontak && emailKontak.trim())
-    extra.emailKontak = emailKontak.trim().toLowerCase();
+// Field opsional WB yang, bila diisi, ikut disimpan di dokumen users/{uid}
+// (harus sinkron dengan isValidWBProfileShape di firestore.rules).
+const WB_OPTIONAL_FIELDS = [
+  "noHp",
+  "emailKontak",
+  "jenisKelamin",
+  "agama",
+  "tempatLahir",
+  "tanggalLahir",
+  "alamat",
+  "sekolahAsal",
+  "namaAyah",
+  "namaIbu",
+  "tingkat",
+  "nis",
+];
+
+// Susun objek field data diri WB dari input mentah (form / impor). Kosong = tidak
+// dikirim, kecuali NISN yang selalu ditulis ("NISN belum ada" bila kosong).
+export const buildWbProfileFields = (dataWB) => {
+  const out = {};
+  for (const key of WB_OPTIONAL_FIELDS) {
+    const val = dataWB[key];
+    if (val != null && String(val).trim()) {
+      out[key] =
+        key === "emailKontak"
+          ? String(val).trim().toLowerCase()
+          : String(val).trim();
+    }
+  }
+  const nisn = String(dataWB.nisn || "").trim();
+  out.nisn = nisn || "NISN belum ada";
+  return out;
+};
+
+export const createWB = async (dataWB, actor) => {
+  const { nama, nomorInduk, paket, tahunAngkatan, nik } = dataWB;
+  const ni = String(nomorInduk).trim();
+  const nikClean = String(nik || "").trim();
+  if (!isValidNIK(nikClean)) {
+    throw new Error("NIK wajib diisi dan harus 16 digit angka.");
+  }
+
+  // Cek awal indeks NIK — mencegah akun Auth "yatim" di kasus umum. Jaminan keras
+  // tetap pada penulisan wbNik/{nik} di bawah (rules menolak overwrite path yang ada).
+  const nikRef = doc(db, "wbNik", nikClean);
+  if ((await getDoc(nikRef)).exists()) {
+    throw new Error("NIK sudah terdaftar atas nama Warga Belajar lain.");
+  }
+
+  const password = generateWbPassword();
+  const extra = {
+    ...buildWbProfileFields(dataWB),
+    nomorInduk: ni,
+    paket,
+    tahunAngkatan,
+    nik: nikClean,
+  };
 
   let uid;
   try {
@@ -178,6 +230,23 @@ export const createWB = async (dataWB, actor) => {
       });
     }
     throw err;
+  }
+
+  // Indeks unik NIK. Penulisan ke path yang sudah ada dievaluasi sebagai "update"
+  // dan ditolak rules, jadi ini penjaga keras terhadap WB dobel.
+  try {
+    await setDoc(nikRef, {
+      uid,
+      nik: nikClean,
+      createdAt: serverTimestamp(),
+    });
+  } catch (err) {
+    // NIK dobel yang lolos cek awal (mis. dua proses paralel): buang dokumen users
+    // yang terlanjur dibuat. Akun Firebase Auth-nya dibersihkan lewat scripts/cleanup-wb.
+    await deleteDoc(doc(db, "users", uid)).catch(() => {});
+    throw new Error("NIK sudah terdaftar atas nama Warga Belajar lain.", {
+      cause: err,
+    });
   }
 
   // Simpan password supaya admin/superadmin bisa membacakannya lagi (WB lupa) & mereset.
@@ -260,13 +329,55 @@ export const normalizeWBStatus = (status) => {
 
 // Edit data diri WB — status keanggotaan diubah lewat setWBLifecycleStatus, bukan di sini.
 // Tetap sertakan status ternormalisasi supaya dokumen lama (boolean) otomatis rapi begitu diedit.
-export const updateWB = (wbId, dataWB, actor, currentStatus) =>
-  updateUserRecord(
-    wbId,
-    { ...dataWB, status: normalizeWBStatus(currentStatus) },
-    actor,
-    "MANAJEMEN_WB",
-  );
+// `prevWb` = dokumen WB sebelum diedit (butuh .status & .nik untuk pelihara indeks wbNik).
+export const updateWB = async (wbId, dataWB, actor, prevWb = {}) => {
+  const prevNik = String(prevWb.nik || "").trim();
+  const hasNikField = Object.prototype.hasOwnProperty.call(dataWB, "nik");
+  const newNik = hasNikField ? String(dataWB.nik || "").trim() : prevNik;
+
+  if (hasNikField && newNik && !isValidNIK(newNik)) {
+    throw new Error("NIK harus 16 digit angka.");
+  }
+
+  // Pelihara indeks unik wbNik/{nik} bila NIK ditambahkan / diganti.
+  if (newNik !== prevNik) {
+    if (newNik) {
+      try {
+        await setDoc(doc(db, "wbNik", newNik), {
+          uid: wbId,
+          nik: newNik,
+          createdAt: serverTimestamp(),
+        });
+      } catch (err) {
+        throw new Error("NIK sudah terdaftar atas nama Warga Belajar lain.", {
+          cause: err,
+        });
+      }
+    }
+    if (prevNik) {
+      await deleteDoc(doc(db, "wbNik", prevNik)).catch(() => {});
+    }
+  }
+
+  const payload = { ...dataWB, status: normalizeWBStatus(prevWb.status) };
+  if (hasNikField) {
+    if (newNik) payload.nik = newNik;
+    else delete payload.nik;
+  }
+  // Rapikan field data diri opsional: kosong -> hapus dari dokumen. NISN -> marker.
+  for (const key of WB_OPTIONAL_FIELDS) {
+    if (key in payload && !String(payload[key] ?? "").trim()) {
+      payload[key] = deleteField();
+    } else if (key === "emailKontak" && typeof payload[key] === "string") {
+      payload[key] = payload[key].trim().toLowerCase();
+    }
+  }
+  if ("nisn" in payload) {
+    payload.nisn = String(payload.nisn ?? "").trim() || "NISN belum ada";
+  }
+
+  await updateUserRecord(wbId, payload, actor, "MANAJEMEN_WB");
+};
 
 // Ubah status keanggotaan WB: AKTIF, NONAKTIF (catat tahun terakhir aktif), atau LULUS (catat tahun lulus).
 export const setWBLifecycleStatus = async (
@@ -288,7 +399,27 @@ export const setWBLifecycleStatus = async (
 
 export const deleteWB = async (wb, actor) => {
   await deleteDoc(doc(db, "wbSecrets", wb.id)).catch(() => {});
+  if (wb.nik) {
+    await deleteDoc(doc(db, "wbNik", String(wb.nik).trim())).catch(() => {});
+  }
+  await deleteDoc(doc(db, "wbPhotos", wb.id)).catch(() => {});
   await deleteUserRecord(wb, actor, "MANAJEMEN_WB");
+};
+
+// --- Foto WB (koleksi terpisah wbPhotos/{uid}, base64) ---
+export const setWBPhoto = async (wbId, base64, actor) => {
+  await setDoc(doc(db, "wbPhotos", wbId), {
+    base64,
+    updatedAt: serverTimestamp(),
+  });
+  await createAuditLog(actor, "UPDATE", "MANAJEMEN_WB", wbId, { event: "FOTO" });
+};
+
+export const deleteWBPhoto = async (wbId, actor) => {
+  await deleteDoc(doc(db, "wbPhotos", wbId));
+  await createAuditLog(actor, "UPDATE", "MANAJEMEN_WB", wbId, {
+    event: "FOTO_HAPUS",
+  });
 };
 
 // --- 2. MANAJEMEN PENGAJAR ---
@@ -552,4 +683,45 @@ export const updateTagihanStatus = async (tagihanId, status, actor) => {
   await createAuditLog(actor, "UPDATE_STATUS", "TAGIHAN", tagihanId, {
     status,
   });
+};
+
+// --- 9. MANAJEMEN TUGAS ---
+// Tugas menempel pada satu mapel; input inti judul + link file Google Drive.
+// mapelNama & paket didenormalisasi dari subjects saat pemanggil menyusun payload.
+export const createTugas = async (dataTugas, actor) => {
+  const docRef = await addDoc(collection(db, "tugas"), {
+    mapelId: dataTugas.mapelId,
+    mapelNama: dataTugas.mapelNama,
+    paket: dataTugas.paket,
+    judul: dataTugas.judul.trim(),
+    linkFile: dataTugas.linkFile.trim(),
+    author: actor?.nama || actor?.displayName || "Admin",
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  await createAuditLog(actor, "CREATE", "TUGAS", docRef.id, {
+    judul: dataTugas.judul,
+    mapel: dataTugas.mapelNama,
+  });
+  return docRef.id;
+};
+
+export const updateTugas = async (tugasId, dataTugas, actor) => {
+  await updateDoc(doc(db, "tugas", tugasId), {
+    mapelId: dataTugas.mapelId,
+    mapelNama: dataTugas.mapelNama,
+    paket: dataTugas.paket,
+    judul: dataTugas.judul.trim(),
+    linkFile: dataTugas.linkFile.trim(),
+    updatedAt: serverTimestamp(),
+  });
+  await createAuditLog(actor, "UPDATE", "TUGAS", tugasId, {
+    judul: dataTugas.judul,
+    mapel: dataTugas.mapelNama,
+  });
+};
+
+export const deleteTugas = async (tugasId, actor) => {
+  await deleteDoc(doc(db, "tugas", tugasId));
+  await createAuditLog(actor, "DELETE", "TUGAS", tugasId);
 };

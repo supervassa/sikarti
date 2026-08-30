@@ -7,6 +7,7 @@ import {
   faCamera,
   faClockRotateLeft,
   faBookOpen,
+  faFileLines,
   faCreditCard,
   faUser,
   faChevronLeft,
@@ -44,6 +45,7 @@ const WBLayout = () => {
       icon: faClockRotateLeft,
     },
     { path: "/wb/informasi-studi", label: "Informasi Studi", icon: faBookOpen },
+    { path: "/wb/tugas", label: "Tugas", icon: faFileLines },
     { path: "/wb/tagihan", label: "Tagihan", icon: faCreditCard },
     { path: "/wb/profil", label: "Profil Saya", icon: faUser },
   ];

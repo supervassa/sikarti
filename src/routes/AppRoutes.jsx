@@ -28,6 +28,7 @@ import WBDetailPage from "../pages/admin/WBDetailPage";
 import PengajarManagementPage from "../pages/admin/PengajarManagementPage";
 import MapelPage from "../pages/admin/MapelPage";
 import JadwalPage from "../pages/admin/JadwalPage";
+import TugasPage from "../pages/admin/TugasPage";
 import PendaftarPage from "../pages/admin/PendaftarPage";
 import BeritaManagementPage from "../pages/admin/BeritaManagementPage";
 import PresensiPage from "../pages/admin/PresensiPage";
@@ -38,6 +39,7 @@ import JadwalWB from "../pages/wb/JadwalWB.jsx";
 import PresensiWB from "../pages/wb/PresensiWB.jsx";
 import RiwayatKehadiranWB from "../pages/wb/RiwayatKehadiranWB.jsx";
 import InformasiStudiWB from "../pages/wb/InformasiStudiWB.jsx";
+import TugasWB from "../pages/wb/TugasWB.jsx";
 import TagihanWB from "../pages/wb/TagihanWB.jsx";
 import ProfilWB from "../pages/wb/ProfilWB.jsx";
 import PengajarLayout from "../layouts/PengajarLayout.jsx";
@@ -90,6 +92,7 @@ const AppRoutes = () => {
         <Route path="/admin/pengajar" element={<PengajarManagementPage />} />
         <Route path="/admin/mapel" element={<MapelPage />} />
         <Route path="/admin/jadwal" element={<JadwalPage />} />
+        <Route path="/admin/tugas" element={<TugasPage />} />
         <Route
           path="/admin/akademik"
           element={<Navigate to="/admin/mapel" replace />}
@@ -131,6 +134,7 @@ const AppRoutes = () => {
           <Route path="presensi" element={<PresensiWB />} />
           <Route path="riwayat-kehadiran" element={<RiwayatKehadiranWB />} />
           <Route path="informasi-studi" element={<InformasiStudiWB />} />
+          <Route path="tugas" element={<TugasWB />} />
           <Route path="tagihan" element={<TagihanWB />} />
           <Route path="profil" element={<ProfilWB />} />
         </Route>

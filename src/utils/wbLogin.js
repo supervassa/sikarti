@@ -23,6 +23,11 @@ const NOMOR_INDUK_RE = /^\d{9}$/;
 
 export const isValidNomorInduk = (value) => NOMOR_INDUK_RE.test(String(value || "").trim());
 
+// NIK (KTP/KK) Indonesia: tepat 16 digit angka. Dipakai sebagai kunci unik WB
+// (indeks wbNik/{nik}) supaya orang yang sama tidak bisa terdaftar dua kali.
+const NIK_RE = /^\d{16}$/;
+export const isValidNIK = (value) => NIK_RE.test(String(value || "").trim());
+
 // WB uji/dummy: tahun angkatan "9999/9999" -> Nomor Induk berawalan "9999".
 // Tahun 9999 mustahil jadi angkatan asli, jadi dipakai sebagai penanda data uji.
 export const DUMMY_TAHUN_ANGKATAN = "9999/9999";

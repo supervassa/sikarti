@@ -18,8 +18,16 @@ const FLAG_META = {
   },
   "belum-daftar": { label: "belum daftar", cls: "bg-slate-100 text-slate-600" },
   "paket-invalid": { label: "paket tidak valid", cls: "bg-rose-50 text-rose-700" },
+  "nik-kosong": { label: "NIK kosong / tidak valid", cls: "bg-rose-50 text-rose-700" },
+  "tingkat-kosong": { label: "tingkat kosong", cls: "bg-amber-50 text-amber-700" },
   contoh: { label: "baris contoh", cls: "bg-slate-100 text-slate-500" },
   duplikat: { label: "duplikat", cls: "bg-rose-50 text-rose-700" },
+};
+
+const FORMAT_LABEL = {
+  dapodik: "Data Dapodik (lengkap)",
+  template: "Template rapi",
+  mentah: "Data dinas lama (PAKET ABC)",
 };
 
 const csvFromResults = (results) => {
@@ -128,7 +136,8 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
     }
   };
 
-  const rowLocked = (row) => row.flags.includes("paket-invalid");
+  const rowLocked = (row) =>
+    row.flags.includes("paket-invalid") || row.flags.includes("nik-kosong");
   const toggle = (i) => {
     if (rowLocked(rows[i])) return;
     setSelected((s) => s.map((v, idx) => (idx === i ? !v : v)));
@@ -192,12 +201,16 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
           <div className="space-y-4">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
               <p className="text-sm font-semibold text-slate-700">
-                Belum punya file? Unduh template.
+                Cara termudah: ekspor <b>Dapodik</b>.
               </p>
               <p className="text-xs text-slate-500">
-                Template berisi 3 kolom: <b>Nama</b>, <b>Paket</b> (Paket A/B/C),
-                <b> Tahun Angkatan</b>. Isi satu baris per WB, lalu unggah kembali
-                di sini. Baris contoh otomatis dilewati.
+                Unggah langsung file <b>&ldquo;Daftar Peserta Didik&rdquo;</b> dari
+                Dapodik (.xlsx). Semua data ikut terisi: NIK, NISN, tempat/tanggal
+                lahir, alamat, agama, nama orang tua, tingkat, sekolah asal.
+              </p>
+              <p className="text-xs text-slate-500">
+                Tanpa Dapodik? Unduh template: kolom <b>Nama</b>, <b>NIK</b>{" "}
+                (16&nbsp;digit, wajib), <b>Paket</b>, <b>Tahun Angkatan</b>.
               </p>
               <button
                 type="button"
@@ -209,10 +222,9 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
             </div>
 
             <p className="text-sm text-slate-500">
-              Unggah file <b>.xlsx</b> — bisa template di atas, atau file data
-              dinas (sheet <b>{SHEET_DEFAULT}</b>). Sistem mendeteksi formatnya
-              sendiri. Tiap WB dapat Nomor Induk + password otomatis; yang
-              disimpan hanya nama, paket, Nomor Induk, dan tahun angkatan.
+              Sistem mendeteksi format file sendiri. Tiap WB dapat Nomor Induk +
+              password otomatis. Baris tanpa <b>NIK</b> yang valid tidak bisa
+              diimpor (NIK dipakai sebagai kunci unik anti-duplikat).
             </p>
             <input
               type="file"
@@ -251,10 +263,7 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
                 </div>
               )}
               <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-bold">
-                Format:{" "}
-                {format === "template"
-                  ? "Template rapi"
-                  : "Data dinas (PAKET ABC)"}
+                Format: {FORMAT_LABEL[format] || format}
               </span>
             </div>
 
@@ -328,7 +337,9 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
                     <tr>
                       <th className="px-3 py-2 w-10"></th>
                       <th className="px-3 py-2">Nama</th>
+                      <th className="px-3 py-2">NIK</th>
                       <th className="px-3 py-2">Paket</th>
+                      <th className="px-3 py-2">Tk.</th>
                       <th className="px-3 py-2">Nomor Induk</th>
                       <th className="px-3 py-2">Catatan</th>
                     </tr>
@@ -350,8 +361,14 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
                         <td className="px-3 py-2 font-medium text-slate-800">
                           {r.nama}
                         </td>
+                        <td className="px-3 py-2 font-mono text-xs text-slate-700">
+                          {r.nik || "—"}
+                        </td>
                         <td className="px-3 py-2 text-xs text-slate-600">
                           {r.paket}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-slate-600">
+                          {r.tingkat || "—"}
                         </td>
                         <td className="px-3 py-2 font-mono text-xs text-slate-700">
                           {r.nomorInduk}

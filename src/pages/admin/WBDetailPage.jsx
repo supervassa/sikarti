@@ -13,8 +13,36 @@ import {
   resetUserPassword,
   getWBPassword,
   resetWBPassword,
+  setWBPhoto,
+  deleteWBPhoto,
 } from "../../services/adminServices";
+import { readFileField } from "../../services/registrationServices";
 import { isDummyNomorInduk } from "../../utils/wbLogin";
+
+const JENIS_KELAMIN_OPTIONS = ["Laki-laki", "Perempuan"];
+const AGAMA_OPTIONS = [
+  "Islam",
+  "Kristen",
+  "Katolik",
+  "Hindu",
+  "Buddha",
+  "Konghucu",
+  "Lainnya",
+];
+
+const DATA_DIRI_FIELDS = [
+  "nisn",
+  "jenisKelamin",
+  "agama",
+  "tempatLahir",
+  "tanggalLahir",
+  "alamat",
+  "sekolahAsal",
+  "namaAyah",
+  "namaIbu",
+  "tingkat",
+  "nis",
+];
 
 const CURRENT_YEAR = new Date().getFullYear();
 const TAHUN_ANGKATAN_OPTIONS = Array.from({ length: 5 }, (_, i) => {
@@ -22,6 +50,27 @@ const TAHUN_ANGKATAN_OPTIONS = Array.from({ length: 5 }, (_, i) => {
   return `${y}/${y + 1}`;
 });
 const DEFAULT_TAHUN_ANGKATAN = `${CURRENT_YEAR}/${CURRENT_YEAR + 1}`;
+
+const EMPTY_EDIT = {
+  nama: "",
+  emailKontak: "",
+  email: "",
+  paket: "Paket C",
+  tahunAngkatan: DEFAULT_TAHUN_ANGKATAN,
+  nik: "",
+  noHp: "",
+  nisn: "",
+  jenisKelamin: "",
+  agama: "",
+  tempatLahir: "",
+  tanggalLahir: "",
+  alamat: "",
+  sekolahAsal: "",
+  namaAyah: "",
+  namaIbu: "",
+  tingkat: "",
+  nis: "",
+};
 
 const STATUS_META = {
   AKTIF: { label: "Aktif", className: "bg-emerald-50 text-emerald-700" },
@@ -48,15 +97,7 @@ const WBDetailPage = ({ wbId }) => {
   const [loading, setLoading] = useState(true);
   const seeded = useRef(false);
 
-  const [editForm, setEditForm] = useState({
-    nama: "",
-    emailKontak: "",
-    email: "",
-    paket: "Paket C",
-    tahunAngkatan: DEFAULT_TAHUN_ANGKATAN,
-    nik: "",
-    noHp: "",
-  });
+  const [editForm, setEditForm] = useState(EMPTY_EDIT);
   const [statusForm, setStatusForm] = useState({
     status: "AKTIF",
     tahunLulus: DEFAULT_TAHUN_ANGKATAN,
@@ -68,6 +109,10 @@ const WBDetailPage = ({ wbId }) => {
   const [viewedPassword, setViewedPassword] = useState(null);
   const [newCredential, setNewCredential] = useState(null);
   const [copied, setCopied] = useState(false);
+
+  // Foto WB (koleksi wbPhotos/{uid}, base64) — dimuat & disunting hanya di sini.
+  const [photo, setPhoto] = useState(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(
@@ -83,6 +128,7 @@ const WBDetailPage = ({ wbId }) => {
         if (!seeded.current) {
           seeded.current = true;
           setEditForm({
+            ...EMPTY_EDIT,
             nama: data.nama || "",
             emailKontak: data.emailKontak || "",
             email: data.email || "",
@@ -90,6 +136,18 @@ const WBDetailPage = ({ wbId }) => {
             tahunAngkatan: data.tahunAngkatan || DEFAULT_TAHUN_ANGKATAN,
             nik: data.nik || "",
             noHp: data.noHp || "",
+            nisn:
+              data.nisn && data.nisn !== "NISN belum ada" ? data.nisn : "",
+            jenisKelamin: data.jenisKelamin || "",
+            agama: data.agama || "",
+            tempatLahir: data.tempatLahir || "",
+            tanggalLahir: data.tanggalLahir || "",
+            alamat: data.alamat || "",
+            sekolahAsal: data.sekolahAsal || "",
+            namaAyah: data.namaAyah || "",
+            namaIbu: data.namaIbu || "",
+            tingkat: data.tingkat || "",
+            nis: data.nis || "",
           });
           setStatusForm({
             status: normalizeWBStatus(data.status),
@@ -103,6 +161,42 @@ const WBDetailPage = ({ wbId }) => {
     );
     return unsub;
   }, [wbId]);
+
+  useEffect(() => {
+    const unsub = onSnapshot(
+      doc(db, "wbPhotos", wbId),
+      (snap) => setPhoto(snap.exists() ? snap.data().base64 || null : null),
+      () => setPhoto(null),
+    );
+    return unsub;
+  }, [wbId]);
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setPhotoBusy(true);
+    try {
+      const read = await readFileField(file);
+      await setWBPhoto(wb.id, read.base64, currentUser);
+    } catch (err) {
+      alert("Gagal mengunggah foto: " + err.message);
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  const handlePhotoDelete = async () => {
+    if (!confirm("Hapus foto WB ini?")) return;
+    setPhotoBusy(true);
+    try {
+      await deleteWBPhoto(wb.id, currentUser);
+    } catch (err) {
+      alert("Gagal menghapus foto: " + err.message);
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
 
   const tahunOptions = Array.from(
     new Set(
@@ -126,12 +220,13 @@ const WBDetailPage = ({ wbId }) => {
         nik: editForm.nik,
         noHp: editForm.noHp,
       };
+      for (const key of DATA_DIRI_FIELDS) payload[key] = editForm[key];
       if (wb.nomorInduk) {
         payload.emailKontak = editForm.emailKontak.trim().toLowerCase();
       } else {
         payload.email = editForm.email;
       }
-      await updateWB(wb.id, payload, currentUser, wb.status);
+      await updateWB(wb.id, payload, currentUser, wb);
       alert("Data diri WB tersimpan.");
     } catch (err) {
       alert("Gagal memperbarui data WB: " + err.message);
@@ -389,15 +484,20 @@ const WBDetailPage = ({ wbId }) => {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">
-                NIK
+                NIK (16 digit)
               </label>
               <input
                 type="text"
+                inputMode="numeric"
+                maxLength={16}
                 value={editForm.nik}
                 onChange={(e) =>
-                  setEditForm({ ...editForm, nik: e.target.value })
+                  setEditForm({
+                    ...editForm,
+                    nik: e.target.value.replace(/\D/g, ""),
+                  })
                 }
-                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                className="w-full px-3 py-2 border rounded-lg text-sm font-mono outline-none focus:border-red-500"
               />
             </div>
             <div>
@@ -414,6 +514,165 @@ const WBDetailPage = ({ wbId }) => {
               />
             </div>
           </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                NISN
+              </label>
+              <input
+                type="text"
+                value={editForm.nisn}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, nisn: e.target.value })
+                }
+                placeholder="Kosong = 'NISN belum ada'"
+                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                Jenis Kelamin
+              </label>
+              <select
+                value={editForm.jenisKelamin}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, jenisKelamin: e.target.value })
+                }
+                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+              >
+                <option value="">—</option>
+                {JENIS_KELAMIN_OPTIONS.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                Agama
+              </label>
+              <select
+                value={editForm.agama}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, agama: e.target.value })
+                }
+                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+              >
+                <option value="">—</option>
+                {AGAMA_OPTIONS.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                Tingkat / Kelas
+              </label>
+              <input
+                type="text"
+                value={editForm.tingkat}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, tingkat: e.target.value })
+                }
+                placeholder="mis. 10"
+                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                Tempat Lahir
+              </label>
+              <input
+                type="text"
+                value={editForm.tempatLahir}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, tempatLahir: e.target.value })
+                }
+                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                Tanggal Lahir
+              </label>
+              <input
+                type="date"
+                value={editForm.tanggalLahir}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, tanggalLahir: e.target.value })
+                }
+                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">
+              Alamat
+            </label>
+            <textarea
+              rows={2}
+              value={editForm.alamat}
+              onChange={(e) =>
+                setEditForm({ ...editForm, alamat: e.target.value })
+              }
+              className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">
+              Sekolah Asal
+            </label>
+            <input
+              type="text"
+              value={editForm.sekolahAsal}
+              onChange={(e) =>
+                setEditForm({ ...editForm, sekolahAsal: e.target.value })
+              }
+              className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                Nama Ayah
+              </label>
+              <input
+                type="text"
+                value={editForm.namaAyah}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, namaAyah: e.target.value })
+                }
+                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                Nama Ibu
+              </label>
+              <input
+                type="text"
+                value={editForm.namaIbu}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, namaIbu: e.target.value })
+                }
+                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+              />
+            </div>
+          </div>
+
           <div className="flex justify-end pt-2">
             <button
               type="submit"
@@ -424,6 +683,49 @@ const WBDetailPage = ({ wbId }) => {
             </button>
           </div>
         </form>
+      </Card>
+
+      <Card title="Foto">
+        <div className="flex items-center gap-4">
+          <div className="w-24 h-32 shrink-0 rounded-lg border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
+            {photo ? (
+              <img
+                src={photo}
+                alt={`Foto ${wb.nama}`}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-[11px] text-slate-400 text-center px-2">
+                Belum ada foto
+              </span>
+            )}
+          </div>
+          <div className="space-y-2">
+            <label className="inline-block px-3 py-2 text-sm font-semibold text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 cursor-pointer">
+              {photoBusy ? "Memproses…" : photo ? "Ganti Foto" : "Unggah Foto"}
+              <input
+                type="file"
+                accept="image/*"
+                disabled={photoBusy}
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+            </label>
+            {photo && (
+              <button
+                type="button"
+                disabled={photoBusy}
+                onClick={handlePhotoDelete}
+                className="block px-3 py-2 text-sm font-semibold text-rose-700 bg-rose-50 rounded-lg hover:bg-rose-100 disabled:opacity-60"
+              >
+                Hapus Foto
+              </button>
+            )}
+            <p className="text-[11px] text-slate-500">
+              JPG/PNG, maks ± 650 KB. Kompres dulu bila terlalu besar.
+            </p>
+          </div>
+        </div>
       </Card>
 
       <Card title="Kelola Password">
