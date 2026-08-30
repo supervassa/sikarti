@@ -9,7 +9,7 @@ const HARI_ORDER = [
   "Kamis",
   "Jumat",
   "Sabtu",
-  "minggu",
+  "Minggu",
 ];
 
 const JadwalWB = () => {

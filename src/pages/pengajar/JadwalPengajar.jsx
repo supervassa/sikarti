@@ -17,7 +17,15 @@ import {
 import { normalizeWBStatus } from "../../services/adminServices";
 import CaptureAttendanceModal from "../../components/common/CaptureAttendanceModal";
 
-const HARI_ORDER = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const HARI_ORDER = [
+  "Senin",
+  "Selasa",
+  "Rabu",
+  "Kamis",
+  "Jumat",
+  "Sabtu",
+  "Minggu",
+];
 const HARI_INDEX = [
   "Minggu",
   "Senin",
