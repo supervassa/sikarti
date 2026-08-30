@@ -14,7 +14,7 @@ export default defineConfig({
       includeAssets: ["favicon.svg", "pwa-192x192.png", "pwa-512x512.png"],
       manifest: {
         name: "Sistem Informasi PKBM KARTINI",
-        short_name: "SI KARTINI",
+        short_name: "My KARTINI",
         description:
           "Sistem Informasi Pusat Kegiatan Belajar Masyarakat KARTINI",
         theme_color: "#ffffff",

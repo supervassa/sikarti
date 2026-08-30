@@ -178,6 +178,8 @@ export const AuthProvider = ({ children }) => {
         setCurrentUser(null);
       }
       setLoading(false); // Selesai memuat sesi
+      // Sesi siap -> lepas splash awal (dari index.html) dengan transisi halus.
+      window.__hideAppSplash?.();
     });
 
     return unsubscribe;

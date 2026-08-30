@@ -9,7 +9,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="SI KARTINI" />
     <meta name="theme-color" content="#ffffff" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      id="viewport-meta"
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <title>pkbm-kartini</title>
     <script>
       (function () {
@@ -21,9 +25,165 @@
         document.documentElement.classList.toggle("dark", isDark);
       })();
     </script>
+    <script>
+      // Nonaktifkan zoom HANYA saat berjalan sebagai PWA (mode standalone),
+      // bukan di web browser biasa. Dijalankan sebelum paint agar tak ada kedip.
+      (function () {
+        var mm = window.matchMedia;
+        var standalone =
+          (mm &&
+            (mm("(display-mode: standalone)").matches ||
+              mm("(display-mode: fullscreen)").matches ||
+              mm("(display-mode: minimal-ui)").matches)) ||
+          window.navigator.standalone === true;
+        if (!standalone) return;
+        document.documentElement.classList.add("pwa-standalone");
+        var m = document.getElementById("viewport-meta");
+        if (m) {
+          m.setAttribute(
+            "content",
+            "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover",
+          );
+        }
+      })();
+    </script>
+    <style>
+      /* Splash awal: tampil sebelum bundel React siap, lalu fade halus. */
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 22px;
+        background: #ffffff;
+        opacity: 1;
+        transition: opacity 0.45s ease;
+        -webkit-tap-highlight-color: transparent;
+      }
+      html.dark #app-splash {
+        background: #0f172a;
+      }
+      #app-splash.is-hiding {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #app-splash .splash-logo {
+        width: 92px;
+        height: 92px;
+        object-fit: contain;
+        border-radius: 22px;
+        animation: splash-breathe 1.8s ease-in-out infinite;
+      }
+      #app-splash .splash-track {
+        position: relative;
+        width: 148px;
+        height: 4px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: rgba(15, 23, 42, 0.1);
+      }
+      html.dark #app-splash .splash-track {
+        background: rgba(255, 255, 255, 0.14);
+      }
+      #app-splash .splash-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 42%;
+        border-radius: 999px;
+        background: #4f46e5;
+        animation: splash-slide 1.15s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+      }
+      html.dark #app-splash .splash-bar {
+        background: #818cf8;
+      }
+      #app-splash .splash-text {
+        font-family:
+          ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        font-size: 13px;
+        letter-spacing: 0.02em;
+        color: #64748b;
+      }
+      html.dark #app-splash .splash-text {
+        color: #94a3b8;
+      }
+      @keyframes splash-breathe {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.06);
+          opacity: 0.82;
+        }
+      }
+      @keyframes splash-slide {
+        0% {
+          left: -45%;
+          width: 42%;
+        }
+        50% {
+          width: 58%;
+        }
+        100% {
+          left: 100%;
+          width: 42%;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #app-splash .splash-logo,
+        #app-splash .splash-bar {
+          animation-duration: 0.001ms;
+          animation-iteration-count: 1;
+        }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+
+    <div id="app-splash" role="status" aria-label="Memuat aplikasi">
+      <img
+        class="splash-logo"
+        src="/pwa-192x192.png"
+        alt="PKBM KARTINI"
+        draggable="false"
+      />
+      <div class="splash-track"><div class="splash-bar"></div></div>
+      <div class="splash-text">Memuat&hellip;</div>
+    </div>
+
+    <script>
+      // Sembunyikan splash dengan jaminan durasi minimum supaya tidak berkedip.
+      (function () {
+        var MIN_MS = 550;
+        var shownAt = Date.now();
+        var done = false;
+        window.__hideAppSplash = function () {
+          if (done) return;
+          done = true;
+          var wait = Math.max(0, MIN_MS - (Date.now() - shownAt));
+          setTimeout(function () {
+            var el = document.getElementById("app-splash");
+            if (!el) return;
+            el.classList.add("is-hiding");
+            setTimeout(function () {
+              if (el && el.parentNode) el.parentNode.removeChild(el);
+            }, 500);
+          }, wait);
+        };
+        // Pengaman: jangan biarkan splash nyangkut bila init gagal.
+        setTimeout(function () {
+          window.__hideAppSplash();
+        }, 10000);
+      })();
+    </script>
+
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

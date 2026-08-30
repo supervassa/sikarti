@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Perilaku viewport ─────────────────────────────────────────────────
+   PTR kustom berlaku di WEB + PWA, jadi pull-to-refresh bawaan browser
+   dimatikan di kedua mode.                                               */
+html,
+body {
+  overscroll-behavior-y: none;
+}
+
+/* Nonaktifkan zoom HANYA di mode PWA/standalone (class dipasang di index.html).
+   Web browser biasa tetap boleh pinch-zoom & double-tap zoom.
+   - touch-action: matikan pinch-zoom (dilengkapi guard JS di noZoom.js)
+   - text-size-adjust: cegah iOS membesarkan teks otomatis saat rotasi     */
+html.pwa-standalone {
+  touch-action: pan-x pan-y;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+/* biarkan area yang memang perlu pinch (mis. peta / pratinjau gambar) ikut
+   dizoom dengan menambahkan class `allow-zoom` pada elemennya. */
+html.pwa-standalone .allow-zoom {
+  touch-action: auto;
+}
+
 /* react-time-picker — dibuat senada dengan input form lain (border rounded-lg, dark mode). */
 .pkbm-time-picker.react-time-picker {
   display: block;
