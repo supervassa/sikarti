@@ -20,10 +20,12 @@ import {
   faXmark,
   faMagnifyingGlass,
   faRightFromBracket,
+  faBell,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../context/AuthContext";
 import LogoPKBM from "../assets/logo.png";
 import ThemeToggle from "../components/common/ThemeToggle";
+import NotificationBell from "../components/common/NotificationBell";
 
 const AdminLayout = () => {
   const { currentUser, logout, role } = useAuth();
@@ -51,6 +53,7 @@ const AdminLayout = () => {
       icon: faCalendarCheck,
     },
     { path: "/admin/keuangan", label: "Informasi Tagihan", icon: faCreditCard },
+    { path: "/admin/notifikasi", label: "Notifikasi", icon: faBell },
   ];
 
   // Menu Khusus Superadmin (Hanya muncul untuk Superadmin)
@@ -233,6 +236,7 @@ const AdminLayout = () => {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
+            <NotificationBell basePath="/admin" />
             <ThemeToggle />
             <span className="hidden sm:inline-block text-xs font-bold uppercase px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
               {role}

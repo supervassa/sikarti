@@ -26,6 +26,11 @@ import {
   generateWbPassword,
   isValidNIK,
 } from "../utils/wbLogin.js";
+import {
+  notifyBeritaBaru,
+  notifyTagihan,
+  notifyTugasBaru,
+} from "./notificationServices.js";
 
 const CURRENT_TAHUN_AJARAN = (() => {
   const y = new Date().getFullYear();
@@ -170,6 +175,23 @@ export const WB_OPTIONAL_FIELDS = [
   "namaIbu",
   "tingkat",
   "nis",
+];
+
+// Field yang boleh diubah SENDIRI oleh WB di halaman Profil. Sisanya (NISN, NIK,
+// paket, tahunAngkatan, tingkat, status, nomorInduk, email) hanya via admin —
+// ditegakkan di firestore.rules isValidWBSelfProfileUpdate.
+export const WB_SELF_EDITABLE_FIELDS = [
+  "nama",
+  "emailKontak",
+  "noHp",
+  "jenisKelamin",
+  "agama",
+  "tempatLahir",
+  "tanggalLahir",
+  "alamat",
+  "sekolahAsal",
+  "namaAyah",
+  "namaIbu",
 ];
 
 // Susun objek field data diri WB dari input mentah (form / impor). Kosong = tidak
@@ -526,6 +548,10 @@ export const createBerita = async (dataBerita, actor) => {
     updatedAt: serverTimestamp(),
   });
   await createAuditLog(actor, "CREATE", "BERITA", docRef.id, { title });
+  // Berita baru -> notifikasi ke WB & Pengajar. Gagalnya tidak membatalkan pembuatan berita.
+  notifyBeritaBaru(docRef.id, title, actor).catch((err) =>
+    console.warn("Notifikasi berita gagal dikirim:", err),
+  );
   return docRef.id;
 };
 
@@ -711,10 +737,16 @@ export const createTagihan = async (dataTagihan, actor) => {
     nama: dataTagihan.nama,
     jumlah: dataTagihan.jumlah,
   });
+  // Notifikasi tagihan baru ke WB terkait (tanpa nominal — body generik demi privasi).
+  notifyTagihan({ wbId: dataTagihan.wbId }, actor).catch((err) =>
+    console.warn("Notifikasi tagihan gagal dikirim:", err),
+  );
   return docRef.id;
 };
 
-export const updateTagihanStatus = async (tagihanId, status, actor) => {
+// `invoice` (opsional) = dokumen tagihan yang sedang diubah — dipakai untuk mengirim
+// notifikasi ke WB pemiliknya saat status berubah (mis. ditandai LUNAS).
+export const updateTagihanStatus = async (tagihanId, status, actor, invoice) => {
   await updateDoc(doc(db, "invoices", tagihanId), {
     status,
     updatedAt: serverTimestamp(),
@@ -722,6 +754,11 @@ export const updateTagihanStatus = async (tagihanId, status, actor) => {
   await createAuditLog(actor, "UPDATE_STATUS", "TAGIHAN", tagihanId, {
     status,
   });
+  if (invoice?.wbId) {
+    notifyTagihan({ wbId: invoice.wbId, status }, actor).catch((err) =>
+      console.warn("Notifikasi tagihan gagal dikirim:", err),
+    );
+  }
 };
 
 // --- 9. MANAJEMEN TUGAS ---
@@ -742,6 +779,15 @@ export const createTugas = async (dataTugas, actor) => {
     judul: dataTugas.judul,
     mapel: dataTugas.mapelNama,
   });
+  // Tugas baru -> notifikasi ke WB paket terkait & Pengajar.
+  notifyTugasBaru(
+    {
+      judul: dataTugas.judul.trim(),
+      mapelNama: dataTugas.mapelNama,
+      paket: dataTugas.paket,
+    },
+    actor,
+  ).catch((err) => console.warn("Notifikasi tugas gagal dikirim:", err));
   return docRef.id;
 };
 

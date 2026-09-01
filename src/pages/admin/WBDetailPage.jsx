@@ -78,15 +78,27 @@ const EMPTY_EDIT = {
 };
 
 const STATUS_META = {
-  AKTIF: { label: "Aktif", className: "bg-emerald-50 text-emerald-700" },
-  NONAKTIF: { label: "Nonaktif", className: "bg-rose-50 text-rose-700" },
-  LULUS: { label: "Lulus", className: "bg-blue-50 text-blue-700" },
+  AKTIF: {
+    label: "Aktif",
+    className:
+      "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
+  },
+  NONAKTIF: {
+    label: "Nonaktif",
+    className:
+      "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300",
+  },
+  LULUS: {
+    label: "Lulus",
+    className:
+      "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300",
+  },
 };
 
 const Card = ({ title, children }) => (
-  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
     {title && (
-      <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wide">
+      <h2 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
         {title}
       </h2>
     )}
@@ -335,12 +347,12 @@ const WBDetailPage = ({ wbId }) => {
       <div className="space-y-4">
         <Link
           to="/admin/wb"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
         >
           <FontAwesomeIcon icon={faArrowLeft} className="w-3 h-3" />
           Kembali ke Daftar
         </Link>
-        <p className="text-slate-500">
+        <p className="text-slate-500 dark:text-slate-400">
           Warga Belajar tidak ditemukan (mungkin sudah dihapus).
         </p>
       </div>
@@ -354,16 +366,18 @@ const WBDetailPage = ({ wbId }) => {
       <div>
         <Link
           to="/admin/wb"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
         >
           <FontAwesomeIcon icon={faArrowLeft} className="w-3 h-3" />
           Kembali ke Daftar
         </Link>
         <div className="mt-2 flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold text-slate-900">{wb.nama}</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+            {wb.nama}
+          </h1>
           <div className="flex items-center gap-2 shrink-0">
             {isDummyNomorInduk(wb.nomorInduk) && (
-              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
+              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
                 DATA UJI
               </span>
             )}
@@ -374,22 +388,26 @@ const WBDetailPage = ({ wbId }) => {
             </span>
           </div>
         </div>
-        <p className="text-sm text-slate-500">Detail Warga Belajar</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Detail Warga Belajar
+        </p>
       </div>
 
       <Card title="Identitas Login">
-        <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+        <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 px-3 py-2">
           <p className="text-[11px] uppercase tracking-wide text-slate-400">
             Nomor Induk (login WB)
           </p>
           {wb.nomorInduk ? (
-            <p className="font-mono text-lg font-bold text-slate-800">
+            <p className="font-mono text-lg font-bold text-slate-800 dark:text-slate-100">
               {wb.nomorInduk}
             </p>
           ) : (
             <>
-              <p className="text-sm font-semibold text-slate-500">Belum ada</p>
-              <p className="mt-1 text-[11px] text-amber-600">
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                Belum ada
+              </p>
+              <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
                 WB ini dibuat dengan email — login lewat tab &ldquo;Pengajar
                 &amp; Staf&rdquo;. Untuk pindah ke login Nomor Induk: hapus lalu
                 tambahkan ulang.
@@ -402,7 +420,7 @@ const WBDetailPage = ({ wbId }) => {
       <Card title="Data Diri">
         <form onSubmit={handleUpdate} className="space-y-3">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
               Nama Lengkap
             </label>
             <input
@@ -412,12 +430,12 @@ const WBDetailPage = ({ wbId }) => {
               onChange={(e) =>
                 setEditForm({ ...editForm, nama: e.target.value })
               }
-              className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
             />
           </div>
           {wb.nomorInduk ? (
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 Email Kontak (opsional)
               </label>
               <input
@@ -426,13 +444,13 @@ const WBDetailPage = ({ wbId }) => {
                 onChange={(e) =>
                   setEditForm({ ...editForm, emailKontak: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
                 placeholder="Untuk pemberitahuan, bukan untuk login"
               />
             </div>
           ) : (
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 Email
               </label>
               <input
@@ -442,9 +460,9 @@ const WBDetailPage = ({ wbId }) => {
                 onChange={(e) =>
                   setEditForm({ ...editForm, email: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
               />
-              <p className="mt-1 text-[11px] text-amber-600">
+              <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
                 Ini hanya mengubah email kontak di sistem. Email login (Firebase
                 Auth) tetap yang lama sampai WB reset password sendiri.
               </p>
@@ -452,7 +470,7 @@ const WBDetailPage = ({ wbId }) => {
           )}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 Program Paket
               </label>
               <SelectField
@@ -462,7 +480,7 @@ const WBDetailPage = ({ wbId }) => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 Tahun Angkatan
               </label>
               <SelectField
@@ -476,7 +494,7 @@ const WBDetailPage = ({ wbId }) => {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 NIK (16 digit)
               </label>
               <input
@@ -490,11 +508,11 @@ const WBDetailPage = ({ wbId }) => {
                     nik: e.target.value.replace(/\D/g, ""),
                   })
                 }
-                className="w-full px-3 py-2 border rounded-lg text-sm font-mono outline-none focus:border-red-500"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm font-mono outline-none focus:border-red-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 Nomor HP
               </label>
               <input
@@ -503,14 +521,14 @@ const WBDetailPage = ({ wbId }) => {
                 onChange={(e) =>
                   setEditForm({ ...editForm, noHp: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 NISN
               </label>
               <input
@@ -520,11 +538,11 @@ const WBDetailPage = ({ wbId }) => {
                   setEditForm({ ...editForm, nisn: e.target.value })
                 }
                 placeholder="Kosong = 'NISN belum ada'"
-                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 Jenis Kelamin
               </label>
               <SelectField
@@ -540,7 +558,7 @@ const WBDetailPage = ({ wbId }) => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 Agama
               </label>
               <SelectField
@@ -551,7 +569,7 @@ const WBDetailPage = ({ wbId }) => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 Tingkat / Kelas
               </label>
               <input
@@ -561,14 +579,14 @@ const WBDetailPage = ({ wbId }) => {
                   setEditForm({ ...editForm, tingkat: e.target.value })
                 }
                 placeholder="mis. 10"
-                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 Tempat Lahir
               </label>
               <input
@@ -577,11 +595,11 @@ const WBDetailPage = ({ wbId }) => {
                 onChange={(e) =>
                   setEditForm({ ...editForm, tempatLahir: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 Tanggal Lahir
               </label>
               <DateField
@@ -595,7 +613,7 @@ const WBDetailPage = ({ wbId }) => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
               Alamat
             </label>
             <textarea
@@ -604,12 +622,12 @@ const WBDetailPage = ({ wbId }) => {
               onChange={(e) =>
                 setEditForm({ ...editForm, alamat: e.target.value })
               }
-              className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
               Sekolah Asal
             </label>
             <input
@@ -618,13 +636,13 @@ const WBDetailPage = ({ wbId }) => {
               onChange={(e) =>
                 setEditForm({ ...editForm, sekolahAsal: e.target.value })
               }
-              className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 Nama Ayah
               </label>
               <input
@@ -633,11 +651,11 @@ const WBDetailPage = ({ wbId }) => {
                 onChange={(e) =>
                   setEditForm({ ...editForm, namaAyah: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 Nama Ibu
               </label>
               <input
@@ -646,7 +664,7 @@ const WBDetailPage = ({ wbId }) => {
                 onChange={(e) =>
                   setEditForm({ ...editForm, namaIbu: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
               />
             </div>
           </div>
@@ -665,7 +683,7 @@ const WBDetailPage = ({ wbId }) => {
 
       <Card title="Foto">
         <div className="flex items-center gap-4">
-          <div className="w-24 h-32 shrink-0 rounded-lg border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
+          <div className="w-24 h-32 shrink-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 overflow-hidden flex items-center justify-center">
             {photo ? (
               <img
                 src={photo}
@@ -679,7 +697,7 @@ const WBDetailPage = ({ wbId }) => {
             )}
           </div>
           <div className="space-y-2">
-            <label className="inline-block px-3 py-2 text-sm font-semibold text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 cursor-pointer">
+            <label className="inline-block px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
               {photoBusy ? "Memproses…" : photo ? "Ganti Foto" : "Unggah Foto"}
               <input
                 type="file"
@@ -694,12 +712,12 @@ const WBDetailPage = ({ wbId }) => {
                 type="button"
                 disabled={photoBusy}
                 onClick={handlePhotoDelete}
-                className="block px-3 py-2 text-sm font-semibold text-rose-700 bg-rose-50 rounded-lg hover:bg-rose-100 disabled:opacity-60"
+                className="block px-3 py-2 text-sm font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/10 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-500/20 disabled:opacity-60"
               >
                 Hapus Foto
               </button>
             )}
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
               JPG/PNG, maks ± 650 KB. Kompres dulu bila terlalu besar.
             </p>
           </div>
@@ -714,7 +732,7 @@ const WBDetailPage = ({ wbId }) => {
                 type="button"
                 disabled={pwdBusy}
                 onClick={handleViewPassword}
-                className="flex-1 px-4 py-2 text-sm font-bold text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-60"
+                className="flex-1 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-60"
               >
                 Lihat Password
               </button>
@@ -722,14 +740,14 @@ const WBDetailPage = ({ wbId }) => {
                 type="button"
                 disabled={pwdBusy}
                 onClick={handleGeneratePassword}
-                className="flex-1 px-4 py-2 text-sm font-bold text-white bg-slate-800 rounded-lg hover:bg-slate-900 disabled:opacity-60"
+                className="flex-1 px-4 py-2 text-sm font-bold text-white bg-slate-800 dark:bg-slate-700 rounded-lg hover:bg-slate-900 dark:hover:bg-slate-600 disabled:opacity-60"
               >
                 Buat Password Baru
               </button>
             </div>
             {viewedPassword && (
-              <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 flex items-center justify-between">
-                <span className="font-mono text-base font-bold text-slate-800">
+              <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 px-3 py-2 flex items-center justify-between">
+                <span className="font-mono text-base font-bold text-slate-800 dark:text-slate-100">
                   {viewedPassword}
                 </span>
                 <button
@@ -737,7 +755,7 @@ const WBDetailPage = ({ wbId }) => {
                   onClick={() =>
                     navigator.clipboard?.writeText(viewedPassword).catch(() => {})
                   }
-                  className="text-xs font-semibold text-red-600 hover:text-red-500"
+                  className="text-xs font-semibold text-red-600 dark:text-red-400 hover:text-red-500"
                 >
                   Salin
                 </button>
@@ -746,16 +764,16 @@ const WBDetailPage = ({ wbId }) => {
             {newCredential && (
               <div
                 id="kartu-kredensial-wb"
-                className="rounded-xl border-2 border-dashed border-slate-300 p-4 space-y-2 bg-slate-50"
+                className="rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 p-4 space-y-2 bg-slate-50 dark:bg-slate-800/50"
               >
-                <p className="text-sm font-bold text-slate-700">
+                <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
                   Password baru dibuat
                 </p>
                 <div>
                   <p className="text-[11px] uppercase tracking-wide text-slate-400">
                     Nomor Induk
                   </p>
-                  <p className="font-mono text-lg font-bold text-slate-900">
+                  <p className="font-mono text-lg font-bold text-slate-900 dark:text-white">
                     {newCredential.nomorInduk}
                   </p>
                 </div>
@@ -763,7 +781,7 @@ const WBDetailPage = ({ wbId }) => {
                   <p className="text-[11px] uppercase tracking-wide text-slate-400">
                     Password
                   </p>
-                  <p className="font-mono text-lg font-bold text-slate-900">
+                  <p className="font-mono text-lg font-bold text-slate-900 dark:text-white">
                     {newCredential.password}
                   </p>
                 </div>
@@ -771,21 +789,21 @@ const WBDetailPage = ({ wbId }) => {
                   <button
                     type="button"
                     onClick={copyCredential}
-                    className="flex-1 px-3 py-2 text-sm font-semibold text-slate-700 border border-slate-200 rounded-lg hover:bg-white"
+                    className="flex-1 px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-white dark:hover:bg-slate-800"
                   >
                     {copied ? "Tersalin ✓" : "Salin"}
                   </button>
                   <button
                     type="button"
                     onClick={() => window.print()}
-                    className="flex-1 px-3 py-2 text-sm font-semibold text-slate-700 border border-slate-200 rounded-lg hover:bg-white"
+                    className="flex-1 px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-white dark:hover:bg-slate-800"
                   >
                     Cetak
                   </button>
                 </div>
               </div>
             )}
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
               &ldquo;Lihat Password&rdquo; untuk dibacakan ke WB yang lupa.
               &ldquo;Buat Password Baru&rdquo; bila password harus diganti.
             </p>
@@ -795,7 +813,7 @@ const WBDetailPage = ({ wbId }) => {
             type="button"
             disabled={pwdBusy}
             onClick={handleEmailReset}
-            className="w-full px-4 py-2 text-sm font-bold text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-60"
+            className="w-full px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-60"
           >
             Kirim Email Reset Password
           </button>
@@ -814,7 +832,7 @@ const WBDetailPage = ({ wbId }) => {
         />
         {statusForm.status === "LULUS" && (
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
               Tahun Lulus
             </label>
             <SelectField
@@ -828,7 +846,7 @@ const WBDetailPage = ({ wbId }) => {
         )}
         {statusForm.status === "NONAKTIF" && (
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
               Terakhir Aktif
             </label>
             <SelectField
@@ -844,7 +862,7 @@ const WBDetailPage = ({ wbId }) => {
           type="button"
           disabled={savingStatus}
           onClick={handleStatusSave}
-          className="w-full px-4 py-2 text-sm bg-slate-800 text-white rounded-lg font-semibold hover:bg-slate-900 disabled:opacity-60"
+          className="w-full px-4 py-2 text-sm bg-slate-800 dark:bg-slate-700 text-white rounded-lg font-semibold hover:bg-slate-900 dark:hover:bg-slate-600 disabled:opacity-60"
         >
           {savingStatus ? "Menyimpan…" : "Update Status"}
         </button>
@@ -855,7 +873,7 @@ const WBDetailPage = ({ wbId }) => {
           type="button"
           disabled={savingDetail}
           onClick={handleDelete}
-          className="w-full px-4 py-2 text-sm font-bold text-rose-700 bg-rose-50 rounded-lg hover:bg-rose-100 disabled:opacity-60"
+          className="w-full px-4 py-2 text-sm font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/10 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-500/20 disabled:opacity-60"
         >
           Hapus Data WB
         </button>

@@ -145,14 +145,14 @@ const LoginPage = () => {
   const tabClass = (active) =>
     `flex-1 py-2 sm:py-2.5 px-1 text-xs sm:text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
       active
-        ? "bg-white text-[#0b1f3d] shadow-sm"
-        : "text-gray-500 hover:text-gray-700"
+        ? "bg-white dark:bg-slate-700 text-[#0b1f3d] dark:text-white shadow-sm"
+        : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200"
     }`;
 
   return (
-    <div className="font-sans text-gray-800 bg-gray-50 min-h-screen flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="font-sans text-gray-800 dark:text-slate-100 bg-gray-50 dark:bg-slate-950 min-h-screen flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8">
       {/* Container Login */}
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+      <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-800 overflow-hidden">
         {/* Header Form */}
         <div className="bg-[#0b1f3d] py-6 px-8 flex flex-col items-center">
           <img
@@ -174,7 +174,7 @@ const LoginPage = () => {
         <div className="p-8 space-y-6">
           {/* Pemilih jenis akun. "Calon WB" bukan mode form di sini — langsung
               diarahkan ke halaman login calon pendaftar. */}
-          <div className="flex gap-1 p-1 bg-gray-100 rounded-xl">
+          <div className="flex gap-1 p-1 bg-gray-100 dark:bg-slate-800 rounded-xl">
             <button
               type="button"
               onClick={() => switchMode("wb")}
@@ -200,7 +200,7 @@ const LoginPage = () => {
 
           {/* Tampilkan Pesan Error Jika Ada */}
           {shownError && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center border border-red-200">
+            <div className="bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm text-center border border-red-200 dark:border-red-500/30">
               {shownError}
             </div>
           )}
@@ -209,7 +209,7 @@ const LoginPage = () => {
             <>
               <form onSubmit={handleWbLogin} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                     Nomor Induk
                   </label>
                   <input
@@ -222,15 +222,15 @@ const LoginPage = () => {
                     onChange={(e) =>
                       setNomorInduk(e.target.value.replace(/\D/g, ""))
                     }
-                    className="w-full px-4 py-3 text-lg tracking-wide border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                    className="w-full px-4 py-3 text-lg tracking-wide border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
                     placeholder="Contoh: 202630042"
                   />
-                  <p className="mt-1.5 text-xs text-gray-500">
+                  <p className="mt-1.5 text-xs text-gray-500 dark:text-slate-400">
                     Nomor Induk dan password diberikan oleh admin PKBM KARTINI.
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                     Password
                   </label>
                   <div className="relative">
@@ -240,14 +240,14 @@ const LoginPage = () => {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-4 py-3 pr-10 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                      className="w-full px-4 py-3 pr-10 text-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
                       placeholder="Password dari admin"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((prev) => !prev)}
                       tabIndex={-1}
-                      className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600"
+                      className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
                     >
                       <FontAwesomeIcon
                         icon={showPassword ? faEyeSlash : faEye}
@@ -266,7 +266,7 @@ const LoginPage = () => {
                 </button>
               </form>
 
-              <p className="text-center text-sm text-gray-500">
+              <p className="text-center text-sm text-gray-500 dark:text-slate-400">
                 Lupa atau tidak tahu password? Hubungi admin PKBM KARTINI.
               </p>
             </>
@@ -274,7 +274,7 @@ const LoginPage = () => {
             <>
               <form onSubmit={handleEmailLogin} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                     Email
                   </label>
                   <input
@@ -282,19 +282,19 @@ const LoginPage = () => {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
                     placeholder="nama@email.com"
                   />
                 </div>
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">
                       Password
                     </label>
                     <button
                       type="button"
                       onClick={openResetModal}
-                      className="text-xs font-medium text-red-600 hover:text-red-500"
+                      className="text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-500"
                     >
                       Lupa password?
                     </button>
@@ -305,14 +305,14 @@ const LoginPage = () => {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                      className="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
                       placeholder="••••••••"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((prev) => !prev)}
                       tabIndex={-1}
-                      className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600"
+                      className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
                     >
                       <FontAwesomeIcon
                         icon={showPassword ? faEyeSlash : faEye}
@@ -334,10 +334,10 @@ const LoginPage = () => {
               {/* Divider */}
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-200"></div>
+                  <div className="w-full border-t border-gray-200 dark:border-slate-700"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">
+                  <span className="px-2 bg-white dark:bg-slate-900 text-gray-500 dark:text-slate-400">
                     Atau masuk dengan
                   </span>
                 </div>
@@ -348,7 +348,7 @@ const LoginPage = () => {
                 onClick={handleGoogleLogin}
                 type="button"
                 disabled={busy}
-                className={`w-full flex justify-center items-center py-2.5 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 transition-all ${busy ? "opacity-70 cursor-not-allowed" : ""}`}
+                className={`w-full flex justify-center items-center py-2.5 px-4 border border-gray-300 dark:border-slate-700 rounded-lg shadow-sm bg-white dark:bg-slate-800 text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 dark:focus:ring-slate-600 transition-all ${busy ? "opacity-70 cursor-not-allowed" : ""}`}
               >
                 {/* Ikon Google SVG */}
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -376,10 +376,13 @@ const LoginPage = () => {
         </div>
 
         {/* Footer Text — akses "Calon WB" kini lewat pemilih jenis akun di atas. */}
-        <div className="bg-gray-50 py-4 px-8 border-t border-gray-100 text-center">
-          <p className="text-sm text-gray-600">
+        <div className="bg-gray-50 dark:bg-slate-800/50 py-4 px-8 border-t border-gray-100 dark:border-slate-800 text-center">
+          <p className="text-sm text-gray-600 dark:text-slate-300">
             Kembali ke{" "}
-            <Link to="/" className="font-medium text-red-600 hover:text-red-500">
+            <Link
+              to="/"
+              className="font-medium text-red-600 dark:text-red-400 hover:text-red-500"
+            >
               Beranda
             </Link>
           </p>
@@ -389,11 +392,13 @@ const LoginPage = () => {
       {/* Modal Lupa Password */}
       {isResetOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
-            <h2 className="text-lg font-bold text-gray-900">Reset Password</h2>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+              Reset Password
+            </h2>
             {resetStatus === "success" ? (
               <>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-slate-300">
                   Jika <span className="font-semibold">{resetEmail}</span>{" "}
                   terdaftar, tautan reset password sudah dikirim ke email
                   tersebut. Cek juga folder spam.
@@ -411,7 +416,7 @@ const LoginPage = () => {
             ) : (
               <form onSubmit={handleResetPassword} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                     Email
                   </label>
                   <input
@@ -420,9 +425,9 @@ const LoginPage = () => {
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
                     placeholder="nama@email.com"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
                   />
-                  <p className="mt-1.5 text-xs text-gray-500">
+                  <p className="mt-1.5 text-xs text-gray-500 dark:text-slate-400">
                     Kami akan mengirim tautan reset password ke email ini.
                   </p>
                 </div>
@@ -430,7 +435,7 @@ const LoginPage = () => {
                   <button
                     type="button"
                     onClick={() => setIsResetOpen(false)}
-                    className="px-4 py-2 text-sm text-gray-600 font-semibold"
+                    className="px-4 py-2 text-sm text-gray-600 dark:text-slate-300 font-semibold"
                   >
                     Batal
                   </button>

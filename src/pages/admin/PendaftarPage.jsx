@@ -29,7 +29,12 @@ const STATUS_META = {
   DITOLAK: { label: "Ditolak", cls: "bg-rose-50 text-rose-700" },
 };
 
-const FILTERS = ["Semua", ...Object.keys(STATUS_META)];
+// Calon yang sudah diaktifkan pindah ke Manajemen WB, jadi tidak lagi tampil di sini.
+const HIDDEN_STATUS = "DIAKTIFKAN";
+const FILTERS = [
+  "Semua",
+  ...Object.keys(STATUS_META).filter((s) => s !== HIDDEN_STATUS),
+];
 
 const fmtDate = (ts) =>
   ts?.toDate
@@ -81,12 +86,20 @@ const PendaftarPage = () => {
     return () => clearInterval(id);
   }, []);
 
+  // Sembunyikan yang sudah diaktifkan (sudah ada di Manajemen WB).
+  const activeRows = useMemo(
+    () => rows.filter((r) => r.status !== HIDDEN_STATUS),
+    [rows],
+  );
+
   const filtered = useMemo(
     () =>
       filter === "Semua"
-        ? rows
-        : rows.filter((r) => (r.status || "MENUNGGU_PEMBAYARAN") === filter),
-    [rows, filter],
+        ? activeRows
+        : activeRows.filter(
+            (r) => (r.status || "MENUNGGU_PEMBAYARAN") === filter,
+          ),
+    [activeRows, filter],
   );
 
   // Modal detail selalu dibaca dari data realtime lewat id-nya.

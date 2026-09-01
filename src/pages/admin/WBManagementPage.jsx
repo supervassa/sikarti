@@ -36,9 +36,21 @@ const TAHUN_ANGKATAN_OPTIONS = Array.from({ length: 5 }, (_, i) => {
 const DEFAULT_TAHUN_ANGKATAN = `${CURRENT_YEAR}/${CURRENT_YEAR + 1}`;
 
 const STATUS_META = {
-  AKTIF: { label: "Aktif", className: "bg-emerald-50 text-emerald-700" },
-  NONAKTIF: { label: "Nonaktif", className: "bg-rose-50 text-rose-700" },
-  LULUS: { label: "Lulus", className: "bg-blue-50 text-blue-700" },
+  AKTIF: {
+    label: "Aktif",
+    className:
+      "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
+  },
+  NONAKTIF: {
+    label: "Nonaktif",
+    className:
+      "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300",
+  },
+  LULUS: {
+    label: "Lulus",
+    className:
+      "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300",
+  },
 };
 
 const JENIS_KELAMIN_OPTIONS = ["Laki-laki", "Perempuan"];
@@ -312,10 +324,10 @@ const WBManagementPage = () => {
     <section className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
             Manajemen Warga Belajar
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Kelola data siswa Paket A, Paket B, dan Paket C PKBM KARTINI.
           </p>
         </div>
@@ -323,13 +335,13 @@ const WBManagementPage = () => {
           <button
             onClick={handleExportCsv}
             disabled={exportBusy || listWB.length === 0}
-            className="border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all disabled:opacity-50"
+            className="border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all disabled:opacity-50"
           >
             {exportBusy ? "Menyiapkan…" : "Ekspor Kredensial (CSV)"}
           </button>
           <button
             onClick={() => setImportOpen(true)}
-            className="border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all"
+            className="border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all"
           >
             Impor dari Excel
           </button>
@@ -352,8 +364,8 @@ const WBManagementPage = () => {
 
       {/* Baris WB uji */}
       {(dummyList.length > 0 || showDummy) && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm">
-          <label className="flex items-center gap-2 font-semibold text-amber-800">
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-2.5 text-sm">
+          <label className="flex items-center gap-2 font-semibold text-amber-800 dark:text-amber-300">
             <input
               type="checkbox"
               checked={showDummy}
@@ -364,7 +376,7 @@ const WBManagementPage = () => {
             />
             Tampilkan WB uji
           </label>
-          <span className="text-amber-700">
+          <span className="text-amber-700 dark:text-amber-400">
             {dummyList.length} WB uji (Nomor Induk 9999…)
           </span>
           {dummyList.length > 0 && (
@@ -372,7 +384,7 @@ const WBManagementPage = () => {
               type="button"
               disabled={dummyBusy}
               onClick={handleDeleteDummy}
-              className="ml-auto px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-xs font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-50"
+              className="ml-auto px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/10 text-xs font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-500/20 disabled:opacity-50"
             >
               {dummyBusy ? "Menghapus…" : "Hapus WB Uji"}
             </button>
@@ -381,7 +393,7 @@ const WBManagementPage = () => {
       )}
 
       {/* Tab Program Paket */}
-      <div className="flex gap-1 border-b border-slate-200 overflow-x-auto">
+      <div className="flex gap-1 border-b border-slate-200 dark:border-slate-800 overflow-x-auto">
         {PAKET_TABS.map((tab) => (
           <button
             key={tab}
@@ -391,8 +403,8 @@ const WBManagementPage = () => {
             }}
             className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px whitespace-nowrap transition-all ${
               filterPaket === tab
-                ? "border-red-600 text-red-600"
-                : "border-transparent text-slate-500 hover:text-slate-800"
+                ? "border-red-600 text-red-600 dark:text-red-400"
+                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
             }`}
           >
             {tab === "Semua" ? "Semua Paket" : tab}
@@ -407,8 +419,8 @@ const WBManagementPage = () => {
       </div>
 
       {/* Filter & Pencarian */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col sm:flex-row gap-3">
-        <div className="flex-1 flex items-center gap-2 bg-slate-100 rounded-xl px-3 py-2.5">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 flex flex-col sm:flex-row gap-3">
+        <div className="flex-1 flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-xl px-3 py-2.5">
           <FontAwesomeIcon
             icon={faMagnifyingGlass}
             className="text-slate-400 w-3.5 h-3.5"
@@ -421,7 +433,7 @@ const WBManagementPage = () => {
               setSearchNama(e.target.value);
               setPage(1);
             }}
-            className="bg-transparent outline-none text-sm text-slate-700 placeholder:text-slate-400 w-full"
+            className="bg-transparent outline-none text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 w-full"
           />
         </div>
         <SelectField
@@ -439,10 +451,10 @@ const WBManagementPage = () => {
       </div>
 
       {/* Tabel Data WB */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-semibold">
+            <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-xs uppercase font-semibold">
               <tr>
                 <th className="px-6 py-4">Nama Lengkap</th>
                 <th className="px-4 py-4">Nomor Induk</th>
@@ -453,7 +465,7 @@ const WBManagementPage = () => {
                 <th className="px-6 py-4">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
                 <tr>
                   <td colSpan="7" className="text-center py-8 text-slate-400">
@@ -474,41 +486,46 @@ const WBManagementPage = () => {
                 </tr>
               ) : (
                 pagedWB.map((wb) => (
-                  <tr key={wb.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 font-semibold text-slate-800">
+                  <tr
+                    key={wb.id}
+                    className="hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                  >
+                    <td className="px-6 py-4 font-semibold text-slate-800 dark:text-slate-100">
                       {wb.nama}
                     </td>
-                    <td className="px-4 py-4 font-mono text-xs text-slate-700">
+                    <td className="px-4 py-4 font-mono text-xs text-slate-700 dark:text-slate-300">
                       {wb.nomorInduk ? (
                         <span className="inline-flex items-center gap-1.5">
                           {wb.nomorInduk}
                           {isDummyNomorInduk(wb.nomorInduk) && (
-                            <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[10px] font-bold font-sans">
+                            <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 text-[10px] font-bold font-sans">
                               UJI
                             </span>
                           )}
                         </span>
                       ) : (
-                        <span className="text-slate-300">—</span>
+                        <span className="text-slate-300 dark:text-slate-600">—</span>
                       )}
                     </td>
                     <td className="px-4 py-4">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/30">
                         {wb.paket || "Paket C"}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-xs text-slate-600">
+                    <td className="px-4 py-4 text-xs text-slate-600 dark:text-slate-400">
                       {wb.tahunAngkatan || "-"}
                     </td>
-                    <td className="px-4 py-4 text-xs text-slate-600">
+                    <td className="px-4 py-4 text-xs text-slate-600 dark:text-slate-400">
                       <p>{wb.emailKontak || (wb.nomorInduk ? "—" : wb.email)}</p>
-                      <p className="text-slate-400">{wb.noHp || "-"}</p>
+                      <p className="text-slate-400 dark:text-slate-500">
+                        {wb.noHp || "-"}
+                      </p>
                     </td>
                     <td className="px-4 py-4">{renderStatusBadge(wb)}</td>
                     <td className="px-6 py-4">
                       <Link
                         to={`/admin/wb/${wb.id}`}
-                        className="inline-block px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                        className="inline-block px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                       >
                         Detail
                       </Link>
@@ -537,12 +554,12 @@ const WBManagementPage = () => {
       {/* Modal Form Tambah WB */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-slate-900">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
               Tambah Warga Belajar
             </h2>
             <form onSubmit={handleSubmit} className="space-y-3">
-              <label className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm font-semibold text-amber-800">
+              <label className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm font-semibold text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-300">
                 <input
                   type="checkbox"
                   checked={isDummyForm}
@@ -552,7 +569,7 @@ const WBManagementPage = () => {
                 ekspor
               </label>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Nama Lengkap
                 </label>
                 <input
@@ -560,12 +577,12 @@ const WBManagementPage = () => {
                   type="text"
                   value={form.nama}
                   onChange={(e) => updateAddForm({ nama: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                     Program Paket
                   </label>
                   <SelectField
@@ -575,11 +592,11 @@ const WBManagementPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                     Tahun Angkatan
                   </label>
                   {isDummyForm ? (
-                    <div className="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50 text-slate-500 font-mono">
+                    <div className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-mono">
                       {DUMMY_TAHUN_ANGKATAN} (uji)
                     </div>
                   ) : (
@@ -592,7 +609,7 @@ const WBManagementPage = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Nomor Induk (untuk login WB)
                 </label>
                 <input
@@ -607,16 +624,16 @@ const WBManagementPage = () => {
                       nomorInduk: e.target.value.replace(/\D/g, ""),
                     }));
                   }}
-                  className="w-full px-3 py-2 border rounded-lg text-sm font-mono outline-none focus:border-red-500"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm font-mono outline-none focus:border-red-500"
                 />
-                <p className="mt-1 text-[11px] text-slate-500">
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
                   9 digit angka, disarankan otomatis. Boleh diubah sesuai
                   penomoran lembaga. WB login pakai Nomor Induk ini + password
                   yang dibuat sistem.
                 </p>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Email Kontak (opsional)
                 </label>
                 <input
@@ -625,13 +642,13 @@ const WBManagementPage = () => {
                   onChange={(e) =>
                     updateAddForm({ emailKontak: e.target.value })
                   }
-                  className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
                   placeholder="Untuk pemberitahuan, bukan untuk login"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                     NIK (wajib, 16 digit)
                   </label>
                   <input
@@ -643,30 +660,30 @@ const WBManagementPage = () => {
                       updateAddForm({ nik: e.target.value.replace(/\D/g, "") })
                     }
                     maxLength={16}
-                    className="w-full px-3 py-2 border rounded-lg text-sm font-mono outline-none focus:border-red-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm font-mono outline-none focus:border-red-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                     Nomor HP (opsional)
                   </label>
                   <input
                     type="tel"
                     value={form.noHp}
                     onChange={(e) => updateAddForm({ noHp: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
                   />
                 </div>
               </div>
 
-              <details className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                <summary className="text-xs font-semibold text-slate-600 cursor-pointer">
+              <details className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-3 py-2">
+                <summary className="text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer">
                   Data diri lengkap (opsional)
                 </summary>
                 <div className="mt-3 space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                         NISN
                       </label>
                       <input
@@ -674,11 +691,11 @@ const WBManagementPage = () => {
                         value={form.nisn}
                         onChange={(e) => updateAddForm({ nisn: e.target.value })}
                         placeholder="Kosongkan bila belum ada"
-                        className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                         Jenis Kelamin
                       </label>
                       <SelectField
@@ -691,7 +708,7 @@ const WBManagementPage = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                         Agama
                       </label>
                       <SelectField
@@ -702,7 +719,7 @@ const WBManagementPage = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                         Tingkat / Kelas
                       </label>
                       <input
@@ -712,13 +729,13 @@ const WBManagementPage = () => {
                           updateAddForm({ tingkat: e.target.value })
                         }
                         placeholder="mis. 10"
-                        className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                         Tempat Lahir
                       </label>
                       <input
@@ -727,11 +744,11 @@ const WBManagementPage = () => {
                         onChange={(e) =>
                           updateAddForm({ tempatLahir: e.target.value })
                         }
-                        className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                         Tanggal Lahir
                       </label>
                       <DateField
@@ -742,18 +759,18 @@ const WBManagementPage = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                       Alamat
                     </label>
                     <textarea
                       rows={2}
                       value={form.alamat}
                       onChange={(e) => updateAddForm({ alamat: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                       Sekolah Asal
                     </label>
                     <input
@@ -762,12 +779,12 @@ const WBManagementPage = () => {
                       onChange={(e) =>
                         updateAddForm({ sekolahAsal: e.target.value })
                       }
-                      className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                         Nama Ayah
                       </label>
                       <input
@@ -776,11 +793,11 @@ const WBManagementPage = () => {
                         onChange={(e) =>
                           updateAddForm({ namaAyah: e.target.value })
                         }
-                        className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                         Nama Ibu
                       </label>
                       <input
@@ -789,7 +806,7 @@ const WBManagementPage = () => {
                         onChange={(e) =>
                           updateAddForm({ namaIbu: e.target.value })
                         }
-                        className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500"
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-red-500"
                       />
                     </div>
                   </div>
@@ -800,7 +817,7 @@ const WBManagementPage = () => {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-sm text-slate-600 font-semibold"
+                  className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 font-semibold"
                 >
                   Batal
                 </button>
@@ -822,23 +839,25 @@ const WBManagementPage = () => {
         <div className="fixed inset-0 z-[60] bg-slate-900/50 flex items-center justify-center p-4">
           <div
             id="kartu-kredensial-wb"
-            className="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-xl"
+            className="bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-xl"
           >
-            <h2 className="text-lg font-bold text-slate-900">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
               {credential.title}
             </h2>
-            <div className="rounded-xl border-2 border-dashed border-slate-300 p-4 space-y-2 bg-slate-50">
+            <div className="rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 p-4 space-y-2 bg-slate-50 dark:bg-slate-800/50">
               <div>
                 <p className="text-[11px] uppercase tracking-wide text-slate-400">
                   Nama
                 </p>
-                <p className="font-semibold text-slate-800">{credential.nama}</p>
+                <p className="font-semibold text-slate-800 dark:text-slate-100">
+                  {credential.nama}
+                </p>
               </div>
               <div>
                 <p className="text-[11px] uppercase tracking-wide text-slate-400">
                   Nomor Induk
                 </p>
-                <p className="font-mono text-lg font-bold text-slate-900">
+                <p className="font-mono text-lg font-bold text-slate-900 dark:text-white">
                   {credential.nomorInduk}
                 </p>
               </div>
@@ -846,12 +865,12 @@ const WBManagementPage = () => {
                 <p className="text-[11px] uppercase tracking-wide text-slate-400">
                   Password
                 </p>
-                <p className="font-mono text-lg font-bold text-slate-900">
+                <p className="font-mono text-lg font-bold text-slate-900 dark:text-white">
                   {credential.password}
                 </p>
               </div>
             </div>
-            <p className="text-xs text-amber-600">
+            <p className="text-xs text-amber-600 dark:text-amber-400">
               Catat / cetak dan berikan ke Warga Belajar. Password masih bisa
               dilihat lagi lewat menu <b>Detail</b>.
             </p>
@@ -859,14 +878,14 @@ const WBManagementPage = () => {
               <button
                 type="button"
                 onClick={copyCredential}
-                className="flex-1 px-3 py-2 text-sm font-semibold text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50"
+                className="flex-1 px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 {copied ? "Tersalin ✓" : "Salin"}
               </button>
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="flex-1 px-3 py-2 text-sm font-semibold text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50"
+                className="flex-1 px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 Cetak
               </button>

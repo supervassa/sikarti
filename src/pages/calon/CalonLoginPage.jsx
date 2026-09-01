@@ -67,8 +67,8 @@ const CalonLoginPage = () => {
   };
 
   return (
-    <div className="font-sans text-gray-800 bg-gray-50 min-h-screen flex flex-col justify-center items-center py-12 px-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+    <div className="font-sans text-gray-800 dark:text-slate-100 bg-gray-50 dark:bg-slate-950 min-h-screen flex flex-col justify-center items-center py-12 px-4">
+      <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-800 overflow-hidden">
         <div className="bg-[#0b1f3d] py-6 px-8 flex flex-col items-center">
           <img
             src={LogoPKBM}
@@ -85,14 +85,14 @@ const CalonLoginPage = () => {
 
         <div className="p-8 space-y-6">
           {shownError && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center border border-red-200">
+            <div className="bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm text-center border border-red-200 dark:border-red-500/30">
               {shownError}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                 Email
               </label>
               <input
@@ -101,19 +101,19 @@ const CalonLoginPage = () => {
                 autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all"
                 placeholder="email saat mendaftar"
               />
             </div>
             <div>
               <div className="flex justify-between items-center mb-1">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">
                   Password
                 </label>
                 <button
                   type="button"
                   onClick={openReset}
-                  className="text-xs font-medium text-amber-600 hover:text-amber-500"
+                  className="text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-500"
                 >
                   Lupa / kirim ulang?
                 </button>
@@ -124,7 +124,7 @@ const CalonLoginPage = () => {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all"
                 placeholder="••••••••"
               />
             </div>
@@ -140,19 +140,22 @@ const CalonLoginPage = () => {
           </form>
         </div>
 
-        <div className="bg-gray-50 py-4 px-8 border-t border-gray-100 text-center space-y-1">
-          <p className="text-sm text-gray-600">
+        <div className="bg-gray-50 dark:bg-slate-800/50 py-4 px-8 border-t border-gray-100 dark:border-slate-800 text-center space-y-1">
+          <p className="text-sm text-gray-600 dark:text-slate-300">
             Belum mendaftar?{" "}
             <Link
               to="/daftar"
-              className="font-medium text-amber-600 hover:text-amber-500"
+              className="font-medium text-amber-600 dark:text-amber-400 hover:text-amber-500"
             >
               Daftar di sini
             </Link>
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-500 dark:text-slate-400">
             Warga Belajar / Pengajar / Admin?{" "}
-            <Link to="/login" className="font-medium text-gray-700 underline">
+            <Link
+              to="/login"
+              className="font-medium text-gray-700 dark:text-slate-200 underline"
+            >
               Login portal utama
             </Link>
           </p>
@@ -161,13 +164,13 @@ const CalonLoginPage = () => {
 
       {resetOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
-            <h2 className="text-lg font-bold text-gray-900">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
               Buat / Reset Password
             </h2>
             {resetSent ? (
               <>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-slate-300">
                   Jika{" "}
                   <span className="font-semibold">{resetEmail}</span> terdaftar
                   sebagai calon pendaftar, tautan pembuatan password sudah
@@ -186,7 +189,7 @@ const CalonLoginPage = () => {
             ) : (
               <form onSubmit={handleReset} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                     Email
                   </label>
                   <input
@@ -195,14 +198,14 @@ const CalonLoginPage = () => {
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
                     placeholder="email saat mendaftar"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
                   />
                 </div>
                 <div className="flex justify-end space-x-2">
                   <button
                     type="button"
                     onClick={() => setResetOpen(false)}
-                    className="px-4 py-2 text-sm text-gray-600 font-semibold"
+                    className="px-4 py-2 text-sm text-gray-600 dark:text-slate-300 font-semibold"
                   >
                     Batal
                   </button>

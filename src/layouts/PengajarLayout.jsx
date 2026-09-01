@@ -11,12 +11,14 @@ import {
   faXmark,
   faMagnifyingGlass,
   faRightFromBracket,
+  faBell,
 } from "@fortawesome/free-solid-svg-icons";
 import { signOut } from "firebase/auth";
 import { auth } from "../config/firebase";
 import { useAuth } from "../context/AuthContext";
 import LogoPKBM from "../assets/logo.png";
 import ThemeToggle from "../components/common/ThemeToggle";
+import NotificationBell from "../components/common/NotificationBell";
 
 export const PengajarLayout = () => {
   const { currentUser } = useAuth();
@@ -37,6 +39,7 @@ export const PengajarLayout = () => {
       label: "Jadwal Mengajar",
       icon: faCalendarDays,
     },
+    { path: "/pengajar/notifikasi", label: "Notifikasi", icon: faBell },
     { path: "/pengajar/profil", label: "Profil Saya", icon: faUser },
   ];
 
@@ -182,6 +185,7 @@ export const PengajarLayout = () => {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
+            <NotificationBell basePath="/pengajar" />
             <ThemeToggle />
             <span className="hidden sm:inline-block text-xs font-bold uppercase px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
               Pengajar

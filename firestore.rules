@@ -183,21 +183,17 @@ service cloud.firestore {
         && request.resource.data.noHp is string && request.resource.data.noHp.size() <= 30
         && isRecentServerTime(request.resource.data.updatedAt);
     }
-    // WB menyunting profilnya sendiri (halaman Profil): semua biodata + paket + tahunAngkatan
-    // + nik boleh berubah. Yang DIKUNCI: status keanggotaan, email login, nomorInduk,
-    // role/kd_role/createdAt/lastLogin. Bentuk dokumen tetap divalidasi isValidWBProfileShape.
+    // WB menyunting profilnya sendiri (halaman Profil): HANYA field biodata di bawah
+    // yang boleh berubah. Yang DIKUNCI (hanya admin): NISN, NIK, paket, tahunAngkatan,
+    // tingkat, status keanggotaan, email login, nomorInduk, role/kd_role/createdAt/lastLogin.
     function isValidWBSelfProfileUpdate(uid) {
       return isOwner(uid)
         && resource.data.role == 'wb'
-        && request.resource.data.role == resource.data.role
-        && request.resource.data.kd_role == resource.data.kd_role
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.status == resource.data.status
-        && request.resource.data.email == resource.data.email
-        && (('nomorInduk' in resource.data.keys()) == ('nomorInduk' in request.resource.data.keys()))
-        && (!('nomorInduk' in resource.data.keys()) || request.resource.data.nomorInduk == resource.data.nomorInduk)
-        && (('lastLogin' in resource.data.keys()) == ('lastLogin' in request.resource.data.keys()))
-        && (!('lastLogin' in resource.data.keys()) || request.resource.data.lastLogin == resource.data.lastLogin)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+             'nama', 'emailKontak', 'noHp', 'jenisKelamin', 'agama',
+             'tempatLahir', 'tanggalLahir', 'alamat', 'sekolahAsal',
+             'namaAyah', 'namaIbu', 'updatedAt'
+           ])
         && isValidWBProfileShape(request.resource.data)
         && isRecentServerTime(request.resource.data.updatedAt);
     }
@@ -413,6 +409,32 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
         && request.resource.data.status in ['LUNAS', 'BELUM_LUNAS']
         && isRecentServerTime(request.resource.data.updatedAt);
+    }
+    // --- NOTIFIKASI (in-app) ---
+    // Model berbasis kanal: satu dokumen dibaca banyak orang lewat query
+    // audiences array-contains-any (lihat src/hooks/useNotifications.js). Kanal broadcast
+    // dibatasi allowlist tetap; notifikasi ke satu orang pakai kanal 'u:<uid>'.
+    // Hanya staff (admin/superadmin) yang boleh membuat — WB/Pengajar tidak bisa broadcast.
+    // CATATAN: body notifikasi tidak boleh memuat data sensitif (nominal tagihan, dsb.)
+    // karena list dibuka untuk semua pengguna login (sejajar news/schedules/tugas).
+    // Broadcast hanya boleh menyasar WB & Pengajar (bukan sesama staf).
+    function notifAudienceAllowlist() {
+      return ['all', 'wb', 'wb:Paket A', 'wb:Paket B', 'wb:Paket C', 'pengajar'];
+    }
+    function isValidNotifShape(data) {
+      return data.keys().hasAll(['category', 'title', 'body', 'audiences', 'createdAt', 'createdBy', 'createdByName', 'createdByRole'])
+        && data.keys().hasOnly(['category', 'title', 'body', 'link', 'audiences', 'createdAt', 'createdBy', 'createdByName', 'createdByRole'])
+        && data.category in ['tugas', 'tagihan', 'berita', 'broadcast']
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 150
+        && data.body is string && data.body.size() > 0 && data.body.size() <= 1000
+        && (!('link' in data.keys()) || (data.link is string && data.link.size() > 0 && data.link.size() <= 200 && data.link.matches('^/.*')))
+        && data.audiences is list && data.audiences.size() >= 1 && data.audiences.size() <= 6
+        && (data.audiences.hasOnly(notifAudienceAllowlist())
+            || (data.audiences.size() == 1 && data.audiences[0] is string && data.audiences[0].matches('^u:.{1,120}$')))
+        && data.createdBy == request.auth.uid
+        && data.createdByName is string && data.createdByName.size() <= 100
+        && data.createdByRole in ['admin', 'superadmin']
+        && isRecentServerTime(data.createdAt);
     }
     // --- PENDAFTARAN CALON WB (alur: bayar 48 jam → verifikasi → lengkapi profil → aktivasi) ---
     function isValidRegDataDiri(data) {
@@ -673,6 +695,24 @@ service cloud.firestore {
         && request.resource.data.message.subject is string && request.resource.data.message.subject.size() <= 200
         && request.resource.data.message.html is string && request.resource.data.message.html.size() <= 20000;
       allow update, delete: if false;
+    }
+
+    // notifications/{id}: notifikasi in-app berbasis kanal. Semua pengguna login boleh
+    // membaca (query dibatasi kanal miliknya di client); hanya staff yang membuat/ubah/hapus.
+    match /notifications/{id} {
+      allow get, list: if isSignedIn();
+      allow create: if isStaff() && isValidNotifShape(request.resource.data);
+      allow update, delete: if isStaff();
+    }
+
+    // notificationReads/{uid}: penanda "sudah dilihat sampai kapan" milik tiap pengguna.
+    // Badge lonceng = jumlah notifikasi dengan waktu > lastSeenAt.
+    match /notificationReads/{uid} {
+      allow get: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['lastSeenAt'])
+        && isRecentServerTime(request.resource.data.lastSeenAt);
+      allow delete: if false;
     }
 
     match /{document=**} { allow read, write: if false; }

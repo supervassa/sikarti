@@ -82,36 +82,100 @@ const paketFromTingkat = (tingkat) => {
 };
 
 // Normalisasi tanggal lahir -> "YYYY-MM-DD" (dipakai <input type=date> & rules).
+// Data dinas kerap campur aduk: "07/04/2009", "6/7/1983", "14 Mei 2007",
+// "10/12/ 1981", "01/011986", serial Excel, dll. Fungsi ini toleran; kalau
+// benar-benar tak terbaca -> "" (baris ditandai, bukan gagal).
 const serialToISO = (n) => {
   const d = new Date(Math.round((n - 25569) * 86400 * 1000));
   return isNaN(d) ? "" : d.toISOString().slice(0, 10);
 };
+
+const MONTHS = {
+  jan: 1, januari: 1, feb: 2, februari: 2, mar: 3, maret: 3, march: 3,
+  apr: 4, april: 4, mei: 5, may: 5, jun: 6, juni: 6, june: 6,
+  jul: 7, juli: 7, july: 7, agu: 8, agt: 8, agus: 8, agustus: 8, aug: 8, august: 8,
+  sep: 9, sept: 9, september: 9, okt: 10, oct: 10, oktober: 10, october: 10,
+  nov: 11, nop: 11, november: 11, nopember: 11,
+  des: 12, dec: 12, desember: 12, december: 12,
+};
+
+// Tahun 2 digit -> 4 digit. Pivot: <= (tahun ini %100 + 5) dianggap 20xx.
+const fullYear = (y) => {
+  const n = Number(y);
+  if (String(y).length >= 4) return n;
+  const pivot = (new Date().getFullYear() % 100) + 5;
+  return n <= pivot ? 2000 + n : 1900 + n;
+};
+
+const buildISO = (y, m, d) => {
+  const yy = fullYear(y);
+  if (m >= 1 && m <= 12 && d >= 1 && d <= 31 && yy >= 1900 && yy <= 2100) {
+    return `${yy}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
+  return "";
+};
+
+// dd & mm ambigu -> pakai yang > 12 sebagai hari; kalau dua-duanya <= 12 asumsi D/M.
+const dayMonth = (a, b) => {
+  if (a > 12 && b <= 12) return [a, b];
+  if (b > 12 && a <= 12) return [b, a];
+  return [a, b];
+};
+
 const toISODate = (v) => {
   if (v == null || v === "") return "";
   if (v instanceof Date && !isNaN(v)) return v.toISOString().slice(0, 10);
   if (typeof v === "number" && isFinite(v)) return serialToISO(v);
-  const s = String(v).trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  if (/^\d{4,5}$/.test(s)) return serialToISO(Number(s)); // serial Excel sbg teks
-  const parts = s.match(/^(\d{1,2})[/. -](\d{1,2})[/. -](\d{4})$/);
-  if (parts) {
-    const a = +parts[1];
-    const b = +parts[2];
-    const y = parts[3];
-    // Tentukan hari vs bulan; ambigu -> asumsi D/M (lokal Indonesia).
-    let d = a;
-    let m = b;
-    if (a > 12 && b <= 12) {
-      d = a;
-      m = b;
-    } else if (b > 12 && a <= 12) {
-      d = b;
-      m = a;
-    }
-    if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
-      return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-    }
+
+  // Rapikan: buang bagian jam, rapatkan spasi.
+  const s = String(v)
+    .trim()
+    .replace(/[T ]\d{1,2}[:.]\d{2}(:\d{2})?.*$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!s) return "";
+
+  // YYYY-MM-DD / YYYY.MM.DD / YYYY/MM/DD
+  let m = s.match(/^(\d{4})[/.\- ](\d{1,2})[/.\- ](\d{1,2})$/);
+  if (m) return buildISO(m[1], +m[2], +m[3]);
+
+  // Serial Excel sebagai teks (mis. "31500").
+  if (/^\d{4,5}(\.\d+)?$/.test(s)) return serialToISO(Number(s));
+
+  // "14 Mei 2007" / "14-Mar-98" / "14/September/1990"
+  m = s.match(/^(\d{1,2})[ /.-]+([A-Za-z]+)[ /.-]+(\d{2,4})$/);
+  if (m && MONTHS[m[2].toLowerCase()]) {
+    return buildISO(m[3], MONTHS[m[2].toLowerCase()], +m[1]);
   }
+  // "Mei 14, 2007" / "March 14 2007"
+  m = s.match(/^([A-Za-z]+)[ ,./-]+(\d{1,2})[ ,./-]+(\d{2,4})$/);
+  if (m && MONTHS[m[1].toLowerCase()]) {
+    return buildISO(m[3], MONTHS[m[1].toLowerCase()], +m[2]);
+  }
+
+  // dd?/mm?/yy(yy) — pemisah / . - atau spasi (menampung "10/12/ 1981").
+  m = s.match(/^(\d{1,2})[ /.-]+(\d{1,2})[ /.-]+(\d{2,4})$/);
+  if (m) {
+    const [d, mo] = dayMonth(+m[1], +m[2]);
+    return buildISO(m[3], mo, d);
+  }
+
+  // Typo tanpa pemisah kedua: "01/011986" -> hari=01, "011986" = mm + yyyy.
+  m = s.match(/^(\d{1,2})[ /.-](\d{5,6})$/);
+  if (m) {
+    const blob = m[2];
+    return buildISO(blob.slice(-4), +blob.slice(0, blob.length - 4), +m[1]);
+  }
+
+  // 8 digit rapat: 19860407 (yyyymmdd) atau 07041986 (ddmmyyyy).
+  m = s.match(/^(\d{8})$/);
+  if (m) {
+    const g = m[1];
+    if (/^(19|20)/.test(g)) return buildISO(g.slice(0, 4), +g.slice(4, 6), +g.slice(6, 8));
+    const [d, mo] = dayMonth(+g.slice(0, 2), +g.slice(2, 4));
+    return buildISO(g.slice(4), mo, d);
+  }
+
   return "";
 };
 
@@ -131,16 +195,51 @@ export const parseWorkbook = async (file) => {
 };
 
 // --- 2. UNDUH TEMPLATE KOSONG ---
+// Kolom mengikuti field pada form Data Diri WB, jadi admin bisa langsung
+// menyalin kolom dari ekspor Dapodik ke sini lalu impor.
+const TEMPLATE_HEADERS = [
+  "Nama",
+  "NIK",
+  "NISN",
+  "Jenis Kelamin",
+  "Agama",
+  "Tempat Lahir",
+  "Tanggal Lahir",
+  "Alamat",
+  "No HP",
+  "Email Kontak",
+  "Sekolah Asal",
+  "Nama Ayah",
+  "Nama Ibu",
+  "Tingkat",
+  "Paket",
+  "Tahun Angkatan",
+];
+
 export const downloadTemplate = async () => {
   const XLSX = await import("xlsx");
-  const aoa = [
-    ["Nama", "NIK", "Paket", "Tahun Angkatan"],
-    ["Contoh - Siti Aminah", "3509010101010001", "Paket C", IMPORT_TAHUN_ANGKATAN],
-    ["Contoh - Budi Santoso", "3509010101010002", "Paket B", IMPORT_TAHUN_ANGKATAN],
-    ["Contoh - Ahmad Fauzi", "3509010101010003", "Paket A", IMPORT_TAHUN_ANGKATAN],
+  const contoh = [
+    "Contoh - Siti Aminah",
+    "3509010101010001",
+    "0087654321",
+    "Perempuan",
+    "Islam",
+    "Jember",
+    "2007-05-14",
+    "Dsn. Krajan RT 1 RW 2, Ds. Tempurejo, Kec. Tempurejo",
+    "081234567890",
+    "",
+    "SMPN 1 Tempurejo",
+    "Sukardi",
+    "Aminah",
+    "10",
+    "Paket C",
+    IMPORT_TAHUN_ANGKATAN,
   ];
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws["!cols"] = [{ wch: 32 }, { wch: 20 }, { wch: 14 }, { wch: 16 }];
+  const ws = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, contoh]);
+  ws["!cols"] = TEMPLATE_HEADERS.map((h) => ({
+    wch: Math.max(12, h.length + 4),
+  }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, TEMPLATE_SHEET);
   XLSX.writeFile(wb, "template-impor-wb.xlsx");
@@ -184,39 +283,66 @@ export const parseSheet = (workbook, XLSX, sheetName) => {
       (c) => typeof c === "string" && /paket/i.test(c.trim()),
     );
 
-  return looksTemplate
-    ? { format: "template", rows: parseTemplateGrid(grid, headerRowIdx) }
-    : { format: "mentah", rows: parseMentahGrid(grid) };
+  if (looksTemplate) {
+    // raw:false -> NIK/NISN tidak kena presisi float, tanggal tetap dinormalisasi.
+    const textGrid = XLSX.utils.sheet_to_json(ws, {
+      header: 1,
+      raw: false,
+      blankrows: false,
+    });
+    return { format: "template", rows: parseTemplateGrid(textGrid, headerRowIdx) };
+  }
+  return { format: "mentah", rows: parseMentahGrid(grid) };
 };
 
+// Template rapi — kolom mengikuti form Data Diri WB (lihat TEMPLATE_HEADERS).
 const parseTemplateGrid = (grid, headerRowIdx) => {
   const header = grid[headerRowIdx].map((c) =>
     String(c ?? "").trim().toLowerCase(),
   );
-  const iNama = header.findIndex((h) => h.includes("nama"));
-  const iNik = header.findIndex((h) => h === "nik" || h.includes("nik"));
-  const iPaket = header.findIndex((h) => h.includes("paket"));
-  const iTahun = header.findIndex(
-    (h) => h.includes("tahun") || h.includes("angkatan"),
-  );
+  const col = (test) => header.findIndex(test);
+  const i = {
+    nama: col((h) => h === "nama" || h === "nama lengkap"),
+    nik: col((h) => h === "nik"),
+    nisn: col((h) => h === "nisn"),
+    jk: col((h) => h.includes("kelamin") || h === "jk"),
+    agama: col((h) => h === "agama"),
+    tempatLahir: col((h) => h.includes("tempat lahir")),
+    tglLahir: col((h) => h.includes("tanggal lahir") || h.includes("tgl lahir")),
+    alamat: col((h) => h === "alamat" || h.startsWith("alamat")),
+    hp: col((h) => h.includes("hp") || h.includes("telepon") || h.includes("telp")),
+    email: col((h) => h.includes("email") || h.includes("e-mail")),
+    sekolahAsal: col((h) => h.includes("sekolah asal") || h.includes("asal sekolah")),
+    ayah: col((h) => h.includes("ayah")),
+    ibu: col((h) => h.includes("ibu")),
+    tingkat: col((h) => h.includes("tingkat") || h.includes("kelas") || h.includes("rombel")),
+    paket: col((h) => h.includes("paket")),
+    tahun: col((h) => h.includes("tahun") || h.includes("angkatan")),
+  };
+  const at = (raw, idx) => (idx >= 0 ? blankIfSpaces(raw[idx]) : "");
 
   const rows = [];
   const seen = new Set();
   for (let r = headerRowIdx + 1; r < grid.length; r += 1) {
     const raw = grid[r] || [];
-    const nama = cleanNama(raw[iNama]);
+    const nama = cleanNama(raw[i.nama]);
     if (!nama) continue;
-    const paket = normalizePaket(raw[iPaket]);
-    const nik = iNik >= 0 ? digits(raw[iNik]) : "";
-    const tahunAngkatan =
-      iTahun >= 0 && raw[iTahun]
-        ? String(raw[iTahun]).trim()
-        : IMPORT_TAHUN_ANGKATAN;
+
+    const nik = i.nik >= 0 ? digits(raw[i.nik]) : "";
+    const tingkat = parseTingkat(at(raw, i.tingkat));
+    const paketCol = normalizePaket(raw[i.paket]);
+    const paket = paketCol || paketFromTingkat(tingkat) || "Paket C";
+    const tahunAngkatan = at(raw, i.tahun) || IMPORT_TAHUN_ANGKATAN;
+    const email = at(raw, i.email).toLowerCase();
+    const tglLahirRaw = at(raw, i.tglLahir);
+    const tanggalLahir = toISODate(raw[i.tglLahir]);
 
     const flags = [];
     if (CONTOH_RE.test(nama)) flags.push("contoh");
-    if (!paket) flags.push("paket-invalid");
+    if (!paketCol && !paketFromTingkat(tingkat)) flags.push("paket-invalid");
     if (!isValidNIK(nik)) flags.push("nik-kosong");
+    if (i.tingkat >= 0 && !tingkat) flags.push("tingkat-kosong");
+    if (tglLahirRaw && !tanggalLahir) flags.push("tgl-invalid");
     const key = nik || `${paket}|${nama.toLowerCase()}`;
     if (seen.has(key)) flags.push("duplikat");
     seen.add(key);
@@ -225,7 +351,20 @@ const parseTemplateGrid = (grid, headerRowIdx) => {
       no: r,
       nama,
       nik,
-      paket: paket || "Paket C",
+      nisn: i.nisn >= 0 ? digits(raw[i.nisn]) : "",
+      jenisKelamin: jkFull(at(raw, i.jk)),
+      agama: at(raw, i.agama),
+      tempatLahir: at(raw, i.tempatLahir),
+      tanggalLahir,
+      tanggalLahirRaw: tglLahirRaw,
+      alamat: at(raw, i.alamat).slice(0, 300),
+      noHp: digits(at(raw, i.hp)),
+      emailKontak: email.includes("@") ? email : "",
+      sekolahAsal: at(raw, i.sekolahAsal),
+      namaAyah: tidyNama(at(raw, i.ayah)),
+      namaIbu: tidyNama(at(raw, i.ibu)),
+      tingkat,
+      paket,
       tahunAngkatan,
       flags,
     });
@@ -334,10 +473,13 @@ const parseDapodikGrid = (grid, headerIdx) => {
 
     const emailRaw = at(raw, col.email).toLowerCase();
     const emailKontak = emailRaw.includes("@") ? emailRaw : "";
+    const tglLahirRaw = at(raw, col.tglLahir);
+    const tanggalLahir = toISODate(raw[col.tglLahir]);
 
     const flags = [];
     if (!isValidNIK(nik)) flags.push("nik-kosong");
     if (!tingkat) flags.push("tingkat-kosong");
+    if (tglLahirRaw && !tanggalLahir) flags.push("tgl-invalid");
     const key = nik || `${paket}|${nama.toLowerCase()}`;
     if (seen.has(key)) flags.push("duplikat");
     seen.add(key);
@@ -351,7 +493,8 @@ const parseDapodikGrid = (grid, headerIdx) => {
       jenisKelamin: jkFull(at(raw, col.jk)),
       agama: at(raw, col.agama),
       tempatLahir: at(raw, col.tempatLahir),
-      tanggalLahir: toISODate(raw[col.tglLahir]),
+      tanggalLahir,
+      tanggalLahirRaw: tglLahirRaw,
       alamat,
       noHp: digits(at(raw, col.hp)) || digits(at(raw, col.telepon)),
       emailKontak,
@@ -392,6 +535,7 @@ export const assignNomorInduk = (rows, existingWBList) => {
 // paket-invalid, duplikat, contoh) menonaktifkan centang default.
 const SOFT_FLAGS = new Set([
   "tingkat-kosong",
+  "tgl-invalid",
   "kemungkinan-berhenti",
   "belum-daftar",
 ]);
@@ -405,9 +549,10 @@ export const runImport = async (selectedRows, actor, { onProgress } = {}) => {
     const row = selectedRows[i];
     onProgress?.(i, selectedRows.length, row);
     // Buang field internal; sisanya (nik + data diri) diteruskan apa adanya ke createWB.
-    const { no, flags, nomorInduk, ...profile } = row;
+    const { no, flags, nomorInduk, tanggalLahirRaw, ...profile } = row;
     void no;
     void flags;
+    void tanggalLahirRaw;
     let attempt = 0;
     for (;;) {
       try {

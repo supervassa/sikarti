@@ -5,7 +5,6 @@ import { useAuth } from "../../context/AuthContext";
 import { useWBPhoto } from "../../hooks/useWBPhoto";
 import DateField from "../../components/common/DateField";
 import SelectField from "../../components/common/SelectField";
-import { PAKET_OPTIONS } from "../../config/opsi";
 import {
   updateOwnWBProfile,
   setOwnWBPhoto,
@@ -25,12 +24,6 @@ const AGAMA_OPTIONS = [
   "Konghucu",
   "Lainnya",
 ];
-
-const CURRENT_YEAR = new Date().getFullYear();
-const TAHUN_ANGKATAN_OPTIONS = Array.from({ length: 6 }, (_, i) => {
-  const y = CURRENT_YEAR - 4 + i;
-  return `${y}/${y + 1}`;
-});
 
 const EMPTY_FORM = {
   nama: "",
@@ -64,8 +57,15 @@ const Card = ({ title, children }) => (
 
 const inputCls =
   "w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500 bg-transparent";
+const lockedInputCls =
+  "w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed";
 const labelCls =
   "block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1";
+const lockedNote = (
+  <span className="ml-1 text-[10px] font-normal text-slate-400">
+    (diatur admin)
+  </span>
+);
 
 const ProfilWB = () => {
   const { currentUser } = useAuth();
@@ -114,16 +114,12 @@ const ProfilWB = () => {
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const tahunOptions = Array.from(
-    new Set([...TAHUN_ANGKATAN_OPTIONS, wb?.tahunAngkatan].filter(Boolean)),
-  ).sort();
-
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
     setMessage("");
     try {
-      await updateOwnWBProfile(uid, form, currentUser, wb || {});
+      await updateOwnWBProfile(uid, form, currentUser);
       setMessage("Profil berhasil diperbarui.");
     } catch (err) {
       setMessage("Gagal memperbarui: " + err.message);
@@ -254,41 +250,36 @@ const ProfilWB = () => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Program Paket</label>
-              <SelectField
-                value={form.paket}
-                onChange={(val) => setForm((f) => ({ ...f, paket: val }))}
-                options={PAKET_OPTIONS}
+              <label className={labelCls}>Program Paket {lockedNote}</label>
+              <input
+                type="text"
+                value={form.paket || "-"}
+                disabled
+                readOnly
+                className={lockedInputCls}
               />
             </div>
             <div>
-              <label className={labelCls}>Tahun Angkatan</label>
-              <SelectField
-                value={form.tahunAngkatan}
-                onChange={(val) =>
-                  setForm((f) => ({ ...f, tahunAngkatan: val }))
-                }
-                placeholder="—"
-                options={tahunOptions}
+              <label className={labelCls}>Tahun Angkatan {lockedNote}</label>
+              <input
+                type="text"
+                value={form.tahunAngkatan || "-"}
+                disabled
+                readOnly
+                className={lockedInputCls}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>NIK (16 digit)</label>
+              <label className={labelCls}>NIK (16 digit) {lockedNote}</label>
               <input
                 type="text"
-                inputMode="numeric"
-                maxLength={16}
-                value={form.nik}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    nik: e.target.value.replace(/\D/g, ""),
-                  }))
-                }
-                className={`${inputCls} font-mono`}
+                value={form.nik || "-"}
+                disabled
+                readOnly
+                className={`${lockedInputCls} font-mono`}
               />
             </div>
             <div>
@@ -304,13 +295,13 @@ const ProfilWB = () => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>NISN</label>
+              <label className={labelCls}>NISN {lockedNote}</label>
               <input
                 type="text"
-                value={form.nisn}
-                onChange={set("nisn")}
-                placeholder="Kosong = 'NISN belum ada'"
-                className={inputCls}
+                value={form.nisn || "NISN belum ada"}
+                disabled
+                readOnly
+                className={lockedInputCls}
               />
             </div>
             <div>
@@ -337,13 +328,13 @@ const ProfilWB = () => {
               />
             </div>
             <div>
-              <label className={labelCls}>Tingkat / Kelas</label>
+              <label className={labelCls}>Tingkat / Kelas {lockedNote}</label>
               <input
                 type="text"
-                value={form.tingkat}
-                onChange={set("tingkat")}
-                placeholder="mis. 10"
-                className={inputCls}
+                value={form.tingkat || "-"}
+                disabled
+                readOnly
+                className={lockedInputCls}
               />
             </div>
           </div>

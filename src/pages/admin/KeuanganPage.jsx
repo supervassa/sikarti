@@ -92,6 +92,7 @@ const KeuanganPage = () => {
         item.id,
         item.status === "LUNAS" ? "BELUM_LUNAS" : "LUNAS",
         currentUser,
+        item,
       );
     } catch (err) {
       alert("Gagal memperbarui status tagihan: " + err.message);

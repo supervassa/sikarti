@@ -15,14 +15,36 @@ import SelectField from "../common/SelectField";
 const FLAG_META = {
   "kemungkinan-berhenti": {
     label: "kemungkinan berhenti",
-    cls: "bg-amber-50 text-amber-700",
+    cls: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300",
   },
-  "belum-daftar": { label: "belum daftar", cls: "bg-slate-100 text-slate-600" },
-  "paket-invalid": { label: "paket tidak valid", cls: "bg-rose-50 text-rose-700" },
-  "nik-kosong": { label: "NIK kosong / tidak valid", cls: "bg-rose-50 text-rose-700" },
-  "tingkat-kosong": { label: "tingkat kosong", cls: "bg-amber-50 text-amber-700" },
-  contoh: { label: "baris contoh", cls: "bg-slate-100 text-slate-500" },
-  duplikat: { label: "duplikat", cls: "bg-rose-50 text-rose-700" },
+  "belum-daftar": {
+    label: "belum daftar",
+    cls: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+  },
+  "paket-invalid": {
+    label: "paket tidak valid",
+    cls: "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300",
+  },
+  "nik-kosong": {
+    label: "NIK kosong / tidak valid",
+    cls: "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300",
+  },
+  "tingkat-kosong": {
+    label: "tingkat kosong",
+    cls: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300",
+  },
+  "tgl-invalid": {
+    label: "tgl lahir tak terbaca",
+    cls: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300",
+  },
+  contoh: {
+    label: "baris contoh",
+    cls: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400",
+  },
+  duplikat: {
+    label: "duplikat",
+    cls: "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300",
+  },
 };
 
 const FORMAT_LABEL = {
@@ -182,15 +204,15 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
 
   return (
     <div className="fixed inset-0 z-[70] bg-slate-900/50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-xl max-h-[92vh] overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-xl max-h-[92vh] overflow-y-auto">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-900">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
             Impor Warga Belajar dari Excel
           </h2>
           {step !== "running" && (
             <button
               onClick={close}
-              className="text-slate-400 hover:text-slate-600 text-sm font-semibold"
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-semibold"
             >
               Tutup
             </button>
@@ -200,43 +222,132 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
         {/* STEP: UPLOAD */}
         {step === "upload" && (
           <div className="space-y-4">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
-              <p className="text-sm font-semibold text-slate-700">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4 space-y-2">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                 Cara termudah: ekspor <b>Dapodik</b>.
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Unggah langsung file <b>&ldquo;Daftar Peserta Didik&rdquo;</b> dari
                 Dapodik (.xlsx). Semua data ikut terisi: NIK, NISN, tempat/tanggal
                 lahir, alamat, agama, nama orang tua, tingkat, sekolah asal.
               </p>
-              <p className="text-xs text-slate-500">
-                Tanpa Dapodik? Unduh template: kolom <b>Nama</b>, <b>NIK</b>{" "}
-                (16&nbsp;digit, wajib), <b>Paket</b>, <b>Tahun Angkatan</b>.
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Atau unduh template — kolomnya persis field Data Diri WB (Nama,
+                NIK, NISN, JK, Agama, TTL, Alamat, No HP, Email, Sekolah Asal,
+                Ayah, Ibu, Tingkat, Paket, Tahun Angkatan) sehingga Anda bisa
+                menyalin kolom dari Dapodik ke sini. <b>NIK</b> wajib 16 digit.
               </p>
               <button
                 type="button"
                 onClick={() => downloadTemplate().catch(() => {})}
-                className="px-3 py-2 text-sm font-semibold text-slate-700 border border-slate-300 rounded-lg hover:bg-white"
+                className="px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-white dark:hover:bg-slate-800"
               >
                 Unduh Template Kosong (.xlsx)
               </button>
             </div>
 
-            <p className="text-sm text-slate-500">
+            <details className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
+              <summary className="text-sm font-semibold text-slate-700 dark:text-slate-200 cursor-pointer">
+                Ketentuan kolom — kolom mana yang wajib?
+              </summary>
+              <div className="mt-3 space-y-3 text-xs text-slate-600 dark:text-slate-400">
+                <div>
+                  <p className="font-bold text-slate-700 dark:text-slate-200 mb-1">
+                    Wajib (baris tidak dapat diimpor bila kosong):
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>
+                      <b>Nama</b> — baris tanpa nama otomatis dilewati.
+                    </li>
+                    <li>
+                      <b>NIK</b> — 16 digit angka. Baris tanpa NIK valid terkunci
+                      (centang nonaktif). NIK dipakai sebagai kunci anti-duplikat.
+                    </li>
+                    <li>
+                      <b>Paket</b> <i>atau</i> <b>Tingkat</b> — minimal salah satu.
+                      Jika Tingkat diisi (mis. 10), Paket otomatis: 10–12 → C,
+                      7–9 → B, 1–6 → A. Jika dua-duanya kosong, baris terkunci
+                      (&ldquo;paket tidak valid&rdquo;).
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-bold text-slate-700 dark:text-slate-200 mb-1">
+                    Opsional (boleh kosong satu kolom penuh):
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>
+                      <b>NISN</b> — kosong otomatis jadi &ldquo;NISN belum
+                      ada&rdquo;.
+                    </li>
+                    <li>
+                      <b>Tingkat</b> — kosong hanya jadi peringatan kuning, baris
+                      tetap ikut terimpor.
+                    </li>
+                    <li>
+                      <b>Tahun Angkatan</b> — kosong → default {" "}
+                      <span className="font-mono">2026/2027</span>.
+                    </li>
+                    <li>
+                      Jenis Kelamin, Agama, Tempat/Tanggal Lahir, Alamat, No HP,
+                      Email Kontak, Sekolah Asal, Nama Ayah, Nama Ibu — kosong =
+                      field-nya dibiarkan kosong, tanpa error.
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-bold text-slate-700 dark:text-slate-200 mb-1">Catatan format:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>
+                      Jenis Kelamin: <span className="font-mono">L</span> /{" "}
+                      <span className="font-mono">P</span> atau
+                      Laki-laki / Perempuan.
+                    </li>
+                    <li>
+                      Tanggal Lahir: hampir semua format diterima —{" "}
+                      <span className="font-mono">2007-05-14</span>,{" "}
+                      <span className="font-mono">14/05/2007</span>,{" "}
+                      <span className="font-mono">6-7-1983</span>,{" "}
+                      <span className="font-mono">14 Mei 2007</span>, serial
+                      Excel, dst. Tanggal yang benar-benar tak terbaca ditandai
+                      kuning (<i>tgl lahir tak terbaca</i>) &amp; dikosongkan —
+                      baris <b>tetap bisa diimpor</b>, tinggal lengkapi lewat
+                      Detail WB.
+                    </li>
+                    <li>
+                      Tingkat: angka (10), romawi (X), atau &ldquo;Kelas
+                      10&rdquo;.
+                    </li>
+                    <li>
+                      NIK &amp; NISN sebaiknya diformat sebagai <b>Teks</b> di
+                      Excel agar angka panjang tidak berubah.
+                    </li>
+                    <li>Baris &ldquo;Contoh - …&rdquo; otomatis dilewati.</li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Sistem mendeteksi format file sendiri. Tiap WB dapat Nomor Induk +
-              password otomatis. Baris tanpa <b>NIK</b> yang valid tidak bisa
-              diimpor (NIK dipakai sebagai kunci unik anti-duplikat).
+              password otomatis.
             </p>
             <input
               type="file"
               accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               onChange={handleFile}
               disabled={busy}
-              className="block w-full text-sm file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-red-600 file:text-white file:font-semibold hover:file:bg-red-700"
+              className="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-red-600 file:text-white file:font-semibold hover:file:bg-red-700"
             />
-            {busy && <p className="text-sm text-slate-500">Membaca file…</p>}
+            {busy && (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Membaca file…
+              </p>
+            )}
             {parseError && (
-              <p className="text-sm text-rose-600">{parseError}</p>
+              <p className="text-sm text-rose-600 dark:text-rose-400">
+                {parseError}
+              </p>
             )}
           </div>
         )}
@@ -247,7 +358,7 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
             <div className="flex flex-wrap items-end gap-3">
               {sheetNames.length > 1 && (
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                     Sheet
                   </label>
                   <SelectField
@@ -258,14 +369,14 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
                   />
                 </div>
               )}
-              <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-bold">
+              <span className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold">
                 Format: {FORMAT_LABEL[format] || format}
               </span>
             </div>
 
             {listWB.length > 0 && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 space-y-2">
-                <p className="text-sm text-amber-800">
+              <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-3 space-y-2">
+                <p className="text-sm text-amber-800 dark:text-amber-300">
                   Masih ada <b>{listWB.length}</b> WB lama di sistem. Biasanya
                   dihapus dulu sebelum impor bersih.
                 </p>
@@ -274,18 +385,18 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
                     value={confirmHapus}
                     onChange={(e) => setConfirmHapus(e.target.value)}
                     placeholder='ketik HAPUS'
-                    className="px-2 py-1.5 border rounded-lg text-sm w-32 outline-none focus:border-rose-500"
+                    className="px-2 py-1.5 border border-slate-300 dark:border-slate-700 bg-transparent text-slate-900 dark:text-slate-100 rounded-lg text-sm w-32 outline-none focus:border-rose-500"
                   />
                   <button
                     type="button"
                     disabled={busy || confirmHapus !== "HAPUS"}
                     onClick={handleDeleteOld}
-                    className="px-3 py-1.5 text-sm font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg hover:bg-rose-100 disabled:opacity-50"
+                    className="px-3 py-1.5 text-sm font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-500/20 disabled:opacity-50"
                   >
                     Hapus semua WB lama
                   </button>
                   {busy && progress.label === "Menghapus WB lama" && (
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
                       {progress.current}/{progress.total}
                     </span>
                   )}
@@ -294,7 +405,7 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
             )}
 
             <div className="flex flex-wrap items-center gap-3 text-sm">
-              <span className="font-semibold text-slate-700">
+              <span className="font-semibold text-slate-700 dark:text-slate-200">
                 {selectedRows.length} akan diimpor
               </span>
               <span className="text-slate-400">
@@ -303,7 +414,7 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
               {Object.entries(perPaket).map(([p, n]) => (
                 <span
                   key={p}
-                  className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold"
+                  className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 text-xs font-bold"
                 >
                   {p}: {n}
                 </span>
@@ -312,35 +423,36 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
                 <button
                   type="button"
                   onClick={() => setAll(true)}
-                  className="text-xs font-semibold text-slate-600 hover:text-slate-900"
+                  className="text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
                 >
                   Pilih semua
                 </button>
                 <button
                   type="button"
                   onClick={() => setAll(false)}
-                  className="text-xs font-semibold text-slate-600 hover:text-slate-900"
+                  className="text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
                 >
                   Kosongkan
                 </button>
               </div>
             </div>
 
-            <div className="border border-slate-200 rounded-xl overflow-hidden">
+            <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
               <div className="max-h-[46vh] overflow-y-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-semibold sticky top-0">
+                  <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs uppercase font-semibold sticky top-0">
                     <tr>
                       <th className="px-3 py-2 w-10"></th>
                       <th className="px-3 py-2">Nama</th>
                       <th className="px-3 py-2">NIK</th>
                       <th className="px-3 py-2">Paket</th>
                       <th className="px-3 py-2">Tk.</th>
+                      <th className="px-3 py-2">Lahir</th>
                       <th className="px-3 py-2">Nomor Induk</th>
                       <th className="px-3 py-2">Catatan</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {rows.map((r, i) => (
                       <tr
                         key={`${r.nomorInduk}-${i}`}
@@ -354,19 +466,35 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
                             onChange={() => toggle(i)}
                           />
                         </td>
-                        <td className="px-3 py-2 font-medium text-slate-800">
+                        <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-100">
                           {r.nama}
                         </td>
-                        <td className="px-3 py-2 font-mono text-xs text-slate-700">
+                        <td className="px-3 py-2 font-mono text-xs text-slate-700 dark:text-slate-300">
                           {r.nik || "—"}
                         </td>
-                        <td className="px-3 py-2 text-xs text-slate-600">
+                        <td className="px-3 py-2 text-xs text-slate-600 dark:text-slate-400">
                           {r.paket}
                         </td>
-                        <td className="px-3 py-2 text-xs text-slate-600">
+                        <td className="px-3 py-2 text-xs text-slate-600 dark:text-slate-400">
                           {r.tingkat || "—"}
                         </td>
-                        <td className="px-3 py-2 font-mono text-xs text-slate-700">
+                        <td className="px-3 py-2 text-xs">
+                          {r.tanggalLahir ? (
+                            <span className="text-slate-600 dark:text-slate-400">
+                              {r.tanggalLahir}
+                            </span>
+                          ) : r.tanggalLahirRaw ? (
+                            <span
+                              className="text-amber-600 dark:text-amber-400"
+                              title={`Format asli: "${r.tanggalLahirRaw}" — tidak terbaca, akan dikosongkan`}
+                            >
+                              {r.tanggalLahirRaw} ⚠
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 font-mono text-xs text-slate-700 dark:text-slate-300">
                           {r.nomorInduk}
                         </td>
                         <td className="px-3 py-2">
@@ -374,7 +502,7 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
                             {r.flags.map((f) => (
                               <span
                                 key={f}
-                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${FLAG_META[f]?.cls || "bg-slate-100 text-slate-600"}`}
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${FLAG_META[f]?.cls || "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
                               >
                                 {FLAG_META[f]?.label || f}
                               </span>
@@ -392,7 +520,7 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
               <button
                 type="button"
                 onClick={close}
-                className="px-4 py-2 text-sm text-slate-600 font-semibold"
+                className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 font-semibold"
               >
                 Batal
               </button>
@@ -411,11 +539,11 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
         {/* STEP: RUNNING */}
         {step === "running" && (
           <div className="space-y-3 py-4">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               Membuat akun {progress.current}/{progress.total}…
             </p>
             <p className="text-xs text-slate-400 truncate">{progress.label}</p>
-            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
               <div
                 className="h-full bg-red-600 transition-all"
                 style={{ width: `${pct}%` }}
@@ -431,21 +559,24 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
         {step === "done" && (
           <div className="space-y-4">
             <div className="flex gap-3 text-sm">
-              <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold">
+              <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold">
                 Berhasil: {summary.ok || 0}
               </span>
-              <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-bold">
+              <span className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">
                 Dilewati: {summary.skip || 0}
               </span>
-              <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 font-bold">
+              <span className="px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 font-bold">
                 Gagal: {summary.error || 0}
               </span>
             </div>
 
-            <div id="wb-import-print" className="border border-slate-200 rounded-xl overflow-hidden">
+            <div
+              id="wb-import-print"
+              className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden"
+            >
               <div className="max-h-[46vh] overflow-y-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-semibold sticky top-0">
+                  <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs uppercase font-semibold sticky top-0">
                     <tr>
                       <th className="px-3 py-2">Nama</th>
                       <th className="px-3 py-2">Paket</th>
@@ -454,13 +585,13 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
                       <th className="px-3 py-2">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {results.map((r, i) => (
                       <tr key={i}>
-                        <td className="px-3 py-2 font-medium text-slate-800">
+                        <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-100">
                           {r.nama}
                         </td>
-                        <td className="px-3 py-2 text-xs text-slate-600">
+                        <td className="px-3 py-2 text-xs text-slate-600 dark:text-slate-400">
                           {r.paket}
                         </td>
                         <td className="px-3 py-2 font-mono text-xs">
@@ -492,14 +623,14 @@ const WBImportModal = ({ open, onClose, listWB, actor }) => {
                     `kredensial-wb-impor-${new Date().toISOString().slice(0, 10)}.csv`,
                   )
                 }
-                className="px-4 py-2 text-sm font-semibold text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50"
+                className="px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 Download CSV
               </button>
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="px-4 py-2 text-sm font-semibold text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50"
+                className="px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 Cetak Daftar
               </button>

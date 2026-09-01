@@ -24,7 +24,7 @@ const EMPTY = {
 };
 
 const inputCls =
-  "w-full p-2 border border-gray-300 rounded focus:ring-red-500 focus:border-red-500";
+  "w-full p-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded focus:ring-red-500 focus:border-red-500";
 
 const RegistrationPage = () => {
   const [formData, setFormData] = useState(EMPTY);
@@ -58,7 +58,7 @@ const RegistrationPage = () => {
   };
 
   return (
-    <div className="font-sans text-gray-800 bg-gray-50 min-h-screen flex flex-col">
+    <div className="font-sans text-gray-800 dark:text-slate-100 bg-gray-50 dark:bg-slate-950 min-h-screen flex flex-col transition-colors">
       <Navbar />
 
       <section className="bg-red-600 py-12 md:py-16 border-b border-red-700 text-white">
@@ -75,23 +75,23 @@ const RegistrationPage = () => {
       </section>
 
       <main className="container mx-auto px-4 py-12 flex-grow">
-        <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+        <div className="max-w-3xl mx-auto bg-white dark:bg-slate-900 rounded-xl shadow-md border border-gray-100 dark:border-slate-800 overflow-hidden">
           <div className="p-8">
             {doneEmail ? (
               <div className="text-center space-y-4">
-                <div className="mx-auto w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl font-bold">
+                <div className="mx-auto w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-2xl font-bold">
                   ✓
                 </div>
-                <h2 className="text-xl font-bold text-gray-900">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                   Pendaftaran berhasil dikirim
                 </h2>
-                <p className="text-sm text-gray-600 max-w-md mx-auto">
+                <p className="text-sm text-gray-600 dark:text-slate-300 max-w-md mx-auto">
                   Kami telah mengirim email ke{" "}
                   <span className="font-semibold">{doneEmail}</span> berisi
                   tautan untuk membuat password. Buat password Anda, lalu login
                   untuk melihat tagihan dan mengunggah bukti pembayaran.
                 </p>
-                <p className="text-sm font-semibold text-red-600">
+                <p className="text-sm font-semibold text-red-600 dark:text-red-400">
                   Batas waktu pembayaran: {REGISTRATION_DEADLINE_HOURS} jam
                   sejak sekarang.
                 </p>
@@ -104,12 +104,12 @@ const RegistrationPage = () => {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
-                <h2 className="text-xl font-bold text-gray-900 border-b-2 border-gray-100 pb-2">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white border-b-2 border-gray-100 dark:border-slate-800 pb-2">
                   Data Diri
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                       Nama Lengkap *
                     </label>
                     <input
@@ -122,7 +122,7 @@ const RegistrationPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                       NIK *
                     </label>
                     <input
@@ -136,7 +136,7 @@ const RegistrationPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                       NISN (Opsional)
                     </label>
                     <input
@@ -149,7 +149,7 @@ const RegistrationPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                       Tempat Lahir *
                     </label>
                     <input
@@ -162,7 +162,7 @@ const RegistrationPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                       Tanggal Lahir *
                     </label>
                     <DateField
@@ -176,7 +176,7 @@ const RegistrationPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                       Jenis Kelamin *
                     </label>
                     <SelectField
@@ -193,7 +193,7 @@ const RegistrationPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                       Nomor HP / WhatsApp *
                     </label>
                     <input
@@ -206,7 +206,7 @@ const RegistrationPage = () => {
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                       Alamat Lengkap *
                     </label>
                     <textarea
@@ -219,7 +219,7 @@ const RegistrationPage = () => {
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                       Email Aktif *
                     </label>
                     <input
@@ -230,7 +230,7 @@ const RegistrationPage = () => {
                       onChange={handleChange}
                       className={inputCls}
                     />
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
                       Email ini menjadi username Anda dan tujuan tautan
                       pembuatan password.
                     </p>
@@ -238,12 +238,12 @@ const RegistrationPage = () => {
                 </div>
 
                 {error && (
-                  <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-200">
+                  <div className="bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm border border-red-200 dark:border-red-500/30">
                     {error}
                   </div>
                 )}
 
-                <div className="pt-4 border-t border-gray-200">
+                <div className="pt-4 border-t border-gray-200 dark:border-slate-800">
                   <button
                     type="submit"
                     disabled={submitting}

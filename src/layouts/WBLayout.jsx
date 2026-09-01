@@ -16,6 +16,7 @@ import {
   faXmark,
   faMagnifyingGlass,
   faRightFromBracket,
+  faBell,
 } from "@fortawesome/free-solid-svg-icons";
 import { signOut } from "firebase/auth";
 import { auth } from "../config/firebase";
@@ -23,6 +24,7 @@ import { useAuth } from "../context/AuthContext";
 import { useWBPhoto } from "../hooks/useWBPhoto";
 import LogoPKBM from "../assets/logo.png";
 import ThemeToggle from "../components/common/ThemeToggle";
+import NotificationBell from "../components/common/NotificationBell";
 
 // Avatar WB: foto kalau ada, kalau tidak inisial nama.
 const WBAvatar = ({ photo, name, initials, className = "", initialsClassName = "" }) =>
@@ -64,6 +66,7 @@ const WBLayout = () => {
     { path: "/wb/informasi-studi", label: "Informasi Studi", icon: faBookOpen },
     { path: "/wb/tugas", label: "Tugas", icon: faFileLines },
     { path: "/wb/tagihan", label: "Tagihan", icon: faCreditCard },
+    { path: "/wb/notifikasi", label: "Notifikasi", icon: faBell },
     { path: "/wb/profil", label: "Profil Saya", icon: faUser },
   ];
 
@@ -222,6 +225,7 @@ const WBLayout = () => {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
+            <NotificationBell basePath="/wb" />
             <ThemeToggle />
             <span className="hidden sm:inline-block text-xs font-bold uppercase px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
               Warga Belajar

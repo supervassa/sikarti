@@ -34,3 +34,22 @@ export const formatTanggalPanjang = (iso, fallback = "-") => {
   if (!p) return iso || fallback;
   return `${Number(p.d)} ${MONTHS_SHORT[Number(p.mo) - 1]} ${p.y}`;
 };
+
+// Waktu relatif singkat untuk daftar notifikasi: "baru saja", "5 menit lalu",
+// "2 jam lalu", "3 hari lalu". Terima epoch milidetik.
+export const waktuRelatif = (ms) => {
+  if (!ms) return "";
+  const diff = Date.now() - ms;
+  if (diff < 60_000) return "baru saja";
+  const menit = Math.floor(diff / 60_000);
+  if (menit < 60) return `${menit} menit lalu`;
+  const jam = Math.floor(menit / 60);
+  if (jam < 24) return `${jam} jam lalu`;
+  const hari = Math.floor(jam / 24);
+  if (hari < 7) return `${hari} hari lalu`;
+  const minggu = Math.floor(hari / 7);
+  if (minggu < 5) return `${minggu} minggu lalu`;
+  const bulan = Math.floor(hari / 30);
+  if (bulan < 12) return `${bulan} bulan lalu`;
+  return `${Math.floor(hari / 365)} tahun lalu`;
+};

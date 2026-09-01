@@ -50,6 +50,7 @@ import CalonWBLayout from "../layouts/CalonWBLayout.jsx";
 import CalonLoginPage from "../pages/calon/CalonLoginPage.jsx";
 import TagihanPendaftaranPage from "../pages/calon/TagihanPendaftaranPage.jsx";
 import CalonWBProfilPage from "../pages/calon/CalonWBProfilPage.jsx";
+import NotificationsPage from "../pages/notifikasi/NotificationsPage.jsx";
 
 const AppRoutes = () => {
   return (
@@ -101,23 +102,24 @@ const AppRoutes = () => {
         <Route path="/admin/konten" element={<BeritaManagementPage />} />
         <Route path="/admin/presensi" element={<PresensiPage />} />
         <Route path="/admin/keuangan" element={<KeuanganPage />} />
+        <Route path="/admin/notifikasi" element={<NotificationsPage />} />
       </Route>
 
       {/* 4. RUTE UN-AUTHORIZED & FALLBACK */}
       <Route
         path="/unauthorized"
         element={
-          <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
-            <div className="bg-white p-8 rounded-2xl shadow-md text-center max-w-md w-full">
-              <h1 className="text-2xl font-bold text-red-600 mb-2">
+          <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-950 p-4">
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-md text-center max-w-md w-full">
+              <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-2">
                 Akses Ditolak
               </h1>
-              <p className="text-slate-600 text-sm mb-4">
+              <p className="text-slate-600 dark:text-slate-300 text-sm mb-4">
                 Anda tidak memiliki hak akses untuk membuka halaman ini.
               </p>
               <a
                 href="/"
-                className="inline-block bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-semibold"
+                className="inline-block bg-slate-800 dark:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-semibold"
               >
                 Kembali ke Beranda
               </a>
@@ -136,6 +138,7 @@ const AppRoutes = () => {
           <Route path="informasi-studi" element={<InformasiStudiWB />} />
           <Route path="tugas" element={<TugasWB />} />
           <Route path="tagihan" element={<TagihanWB />} />
+          <Route path="notifikasi" element={<NotificationsPage />} />
           <Route path="profil" element={<ProfilWB />} />
         </Route>
       </Route>
@@ -144,6 +147,7 @@ const AppRoutes = () => {
         <Route path="/pengajar" element={<PengajarLayout />}>
           <Route path="dashboard" element={<DashboardPengajar />} />
           <Route path="jadwal" element={<JadwalPengajar />} />
+          <Route path="notifikasi" element={<NotificationsPage />} />
           <Route path="profil" element={<ProfilPengajar />} />
         </Route>
       </Route>

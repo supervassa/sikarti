@@ -12,13 +12,8 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import {
-  buildWbProfileFields,
-  createAuditLog,
-  WB_OPTIONAL_FIELDS,
-} from "./adminServices";
+import { createAuditLog, WB_SELF_EDITABLE_FIELDS } from "./adminServices";
 import { isInsidePresensiArea } from "../utils/presensiLokasi";
-import { isValidNIK } from "../utils/wbLogin";
 
 export const todayISO = () => new Date().toISOString().slice(0, 10);
 
@@ -76,55 +71,29 @@ export const updateOwnContact = async (uid, noHp, currentUser) => {
   await createAuditLog(currentUser, "UPDATE", "PROFIL_WB", uid, { noHp });
 };
 
-// WB menyunting profilnya sendiri (halaman Profil): biodata + paket + tahunAngkatan + nik.
-// Status keanggotaan, email login, nomorInduk TIDAK ikut (dikunci di firestore.rules).
-// `prevWb` = dokumen WB sebelum diedit — untuk pelihara indeks unik wbNik/{nik}.
-export const updateOwnWBProfile = async (uid, form, currentUser, prevWb = {}) => {
-  const prevNik = String(prevWb.nik || "").trim();
-  const newNik = String(form.nik || "").trim();
-  if (newNik && !isValidNIK(newNik)) {
-    throw new Error("NIK harus 16 digit angka.");
+// WB menyunting profilnya sendiri (halaman Profil). Hanya field biodata yang boleh
+// diubah WB (WB_SELF_EDITABLE_FIELDS). NISN, NIK, Program Paket, Tahun Angkatan,
+// Tingkat/Kelas, status, email login, nomorInduk DIKUNCI — hanya admin yang bisa
+// (ditegakkan ulang di firestore.rules isValidWBSelfProfileUpdate).
+export const updateOwnWBProfile = async (uid, form, currentUser) => {
+  const nama = String(form.nama || "").trim();
+  if (nama.length < 2) {
+    throw new Error("Nama tidak boleh kosong.");
   }
 
-  // Pelihara indeks unik wbNik/{nik}. create-if-absent: kalau NIK sudah dipakai
-  // WB lain, setDoc gagal -> lempar pesan yang jelas.
-  if (newNik !== prevNik) {
-    if (newNik) {
-      try {
-        await setDoc(doc(db, "wbNik", newNik), {
-          uid,
-          nik: newNik,
-          createdAt: serverTimestamp(),
-        });
-      } catch (err) {
-        throw new Error("NIK sudah terdaftar atas nama Warga Belajar lain.", {
-          cause: err,
-        });
-      }
+  const payload = { nama, updatedAt: serverTimestamp() };
+  for (const key of WB_SELF_EDITABLE_FIELDS) {
+    if (key === "nama") continue;
+    const val = form[key] == null ? "" : String(form[key]).trim();
+    if (!val) {
+      payload[key] = deleteField();
+    } else {
+      payload[key] = key === "emailKontak" ? val.toLowerCase() : val;
     }
-    if (prevNik) {
-      await deleteDoc(doc(db, "wbNik", prevNik)).catch(() => {});
-    }
-  }
-
-  const optional = buildWbProfileFields(form); // biodata terisi + nisn (marker bila kosong)
-  const payload = {
-    nama: String(form.nama || "").trim(),
-    paket: form.paket,
-    tahunAngkatan: String(form.tahunAngkatan || "").trim() || deleteField(),
-    updatedAt: serverTimestamp(),
-    ...optional,
-  };
-  payload.nik = newNik || deleteField();
-  // Field opsional yang dikosongkan -> hapus dari dokumen.
-  for (const key of WB_OPTIONAL_FIELDS) {
-    if (!(key in optional)) payload[key] = deleteField();
   }
 
   await updateDoc(doc(db, "users", uid), payload);
-  await createAuditLog(currentUser, "UPDATE", "PROFIL_WB", uid, {
-    nama: payload.nama,
-  });
+  await createAuditLog(currentUser, "UPDATE", "PROFIL_WB", uid, { nama });
 };
 
 // Foto WB (wbPhotos/{uid}, base64). WB kelola fotonya sendiri di halaman Profil.
